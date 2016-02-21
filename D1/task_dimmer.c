@@ -16,7 +16,6 @@ typedef struct {
 	
 	uint32_t a_start_offset_us;
 	uint32_t b_start_offset_us;	
-
 	uint32_t ac_gtg_duration_us;
 	
 	shared_context_t *shared_context;
@@ -61,7 +60,62 @@ void set_dimmer_start_offset(task_dimmer_parameters_t *parameters) {
 
 void set_fsm_state(task_dimmer_parameters_t *parameters, uint8_t state) {
 	
+	parameters->fsm_state = state;
+	parameters->fsm_time_us = 0;
 	
+	switch (state) {
+		case 0:
+			parameters->fsm_timeout_us = DEFAULT_RESPONSE_US;
+			break;
+			
+		case 1:
+			parameters->fsm_timeout_us = AC_GATE_THRESHOLD_US;
+			break;
+			
+		case 2:
+			parameters->fsm_timeout_us = AC_GATE_THRESHOLD_US;
+			break;
+			
+		case 3:
+			parameters->fsm_timeout_us = DEFAULT_RESPONSE_US;
+			break;
+			
+		case 4:
+			parameters->fsm_timeout_us = POWER_ON_RESPONSE_US;
+			break;
+			
+		case 5:
+			parameters->fsm_timeout_us = AC_GATE_THRESHOLD_US;
+			break;
+			
+		case 6:
+			parameters->fsm_timeout_us = parameters->ac_gtg_duration_us - AC_GATE_MIN_US;
+			break;
+			
+		case 7:
+			parameters->fsm_timeout_us = AC_GATE_MIN_US * 2;
+			break;
+			
+		case 251:
+			parameters->fsm_timeout_us = DEFAULT_RESPONSE_US;
+			break;
+			
+		case 252:
+			parameters->fsm_timeout_us = DEFAULT_RESPONSE_US;
+			break;
+			
+		case 253:
+			parameters->fsm_timeout_us = DIAG_NO_POWER_TIMEOUT_US;
+			break;
+			
+		case 254:
+			parameters->fsm_timeout_us = DEFAULT_RESPONSE_US;
+			break;
+			
+		case 255:
+			parameters->fsm_timeout_us = DIAG_NO_AC_GATE_TIMEOUT_US;
+			break;
+	}
 }
 
 /* Task */
@@ -71,7 +125,7 @@ void v_task_dimmer(task_dimmer_parameters_t *parameters) {
 	for(;;) {
 	
 		if (!parameters->fsm_timeout_us) {
-			parameters->shared_context->diag_p0_malfunction = 1;
+			parameters->shared_context->diag.malfunction = 1;
 		}
 		
 		uint16_t tick_count = xTaskGetTickCount();		
@@ -86,7 +140,7 @@ void v_task_dimmer(task_dimmer_parameters_t *parameters) {
 		parameters->prev_tick_count = tick_count;
 		parameters->fsm_time_us += time_delta_us; 
 		
-		if (parameters->shared_context->diag_p0_malfunction) {
+		if (parameters->shared_context->diag.malfunction) {
 			break;
 		}
 	
@@ -94,9 +148,9 @@ void v_task_dimmer(task_dimmer_parameters_t *parameters) {
 		
 			// Init 0: Reset to initial state
 			case 0: 
-				if (parameters->shared_context->diag_p0_no_power) {
+				if (parameters->shared_context->diag.no_power_feedback) {
 					set_fsm_state(parameters, 252);
-				} else if (parameters->shared_context->diag_p1_no_ac_gate) {
+				} else if (parameters->shared_context->diag.no_ac_power) {
 					set_fsm_state(parameters, 254);					
 				} else {
 					set_fsm_state(parameters, 1);
@@ -108,7 +162,7 @@ void v_task_dimmer(task_dimmer_parameters_t *parameters) {
 				if (parameters->fsm_timeout_us) {
 					if (is_ac_gate()) {
 						parameters->ac_gtg_duration_us = 0;
-						parameters->shared_context->diag_p1_no_ac_gate = 0;
+						parameters->shared_context->diag.no_ac_power = 0;
 						set_fsm_state(parameters, 2);						
 					}
 				} else {
@@ -133,7 +187,6 @@ void v_task_dimmer(task_dimmer_parameters_t *parameters) {
 				if (parameters->fsm_timeout_us && 
 					(parameters->shared_context->dima_state || 
 					parameters->shared_context->dimb_state)) {
-					
 					set_dimmer_output(1, 0, 0);
 					set_fsm_state(parameters, 4);
 				} else {					
@@ -146,7 +199,7 @@ void v_task_dimmer(task_dimmer_parameters_t *parameters) {
 			case 4: 
 				if (parameters->fsm_timeout_us) {
 					if (is_power_on()) {
-						parameters->shared_context->diag_p0_no_power = 0;
+						parameters->shared_context->diag.no_power_feedback = 0;
 						set_fsm_state(parameters, 5);
 					}
 				} else {					
@@ -193,7 +246,8 @@ void v_task_dimmer(task_dimmer_parameters_t *parameters) {
 			// Operation 4: Dimming #2
 			case 7: 
 				if (parameters->fsm_timeout_us) {					
-					if (!parameters->shared_context->dima_state && !parameters->shared_context->dimb_state) {
+					if (!parameters->shared_context->dima_state && 
+						!parameters->shared_context->dimb_state) {						
 						set_fsm_state(parameters, 251);
 					} else if (!is_power_on()) {
 						set_fsm_state(parameters, 252);
@@ -215,7 +269,7 @@ void v_task_dimmer(task_dimmer_parameters_t *parameters) {
 				
 			// Idle: Relay not switched on due to hardware problems or overheating
 			case 252: 
-				parameters->shared_context->diag_p0_no_power = 1;
+				parameters->shared_context->diag.no_power_feedback = 1;
 				set_dimmer_output(0, 0, 0);
 				set_fsm_state(parameters, 253);
 				break;
@@ -228,7 +282,7 @@ void v_task_dimmer(task_dimmer_parameters_t *parameters) {
 				
 			// Idle: No gate detected
 			case 254: 
-				parameters->shared_context->diag_p1_no_ac_gate = 1;
+				parameters->shared_context->diag.no_ac_power = 1;
 				set_dimmer_output(0, 0, 0);
 				set_fsm_state(parameters, 255);
 				break;

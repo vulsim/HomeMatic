@@ -6,10 +6,12 @@
 
 typedef struct {
 	
-	unsigned diag_p0_malfunction : 1;
-	unsigned diag_p0_no_power : 1;
-	unsigned diag_p1_no_ac_gate : 1;	
-		
+	struct {
+		unsigned malfunction : 1;		
+		unsigned no_ac_power : 1;
+		unsigned no_power_feedback : 1;
+	} diag;		
+
 	// Dimmer state: 0 - off, 1 - on (mode1), 2 - on (mode2)
 	
 	unsigned dima_state : 2;
