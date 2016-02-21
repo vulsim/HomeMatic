@@ -84,7 +84,6 @@ SRC = $(TARGET).c
 SRC += default_settings.c
 SRC += hardware.c
 SRC += task_dimmer.c
-SRC += task_service.c
 SRC += task_display.c
 SRC += task_input.c
 SRC += free_rtos/tasks.c

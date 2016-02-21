@@ -6,13 +6,19 @@
 
 typedef struct {
 	
-	unsigned alarm_hw_error : 1;
-	unsigned req_read_settings : 1;
-	unsigned req_save_settings : 1;
+	unsigned diag_p0_malfunction : 1;
+	unsigned diag_p0_no_power : 1;
+	unsigned diag_p1_no_ac_gate : 1;	
+		
+	// Dimmer state: 0 - off, 1 - on (mode1), 2 - on (mode2)
+	
+	unsigned dima_state : 2;
+	unsigned dimb_state : 2; 
 	
 	uint8_t dima_level1;
-	uint8_t dima_level2;	
 	uint8_t dimb_level1;
+	
+	uint8_t dima_level2;
 	uint8_t dimb_level2;
 	
 	settings_t *settings;
