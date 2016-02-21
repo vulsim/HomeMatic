@@ -82,7 +82,8 @@ OBJDIR = .
 # List C source files here. (C dependencies are automatically generated.)
 SRC = $(TARGET).c
 SRC += dimmer_task.c
-SRC += runtime_config.c
+SRC += service_task.c
+SRC += default_device_settings.c
 SRC += free_rtos/tasks.c
 SRC += free_rtos/list.c
 SRC += free_rtos/port.c

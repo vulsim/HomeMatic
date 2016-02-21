@@ -1,42 +1,30 @@
 /*
-    HomeMatic D1 V1.0.0 - Copyright (C) 2016 vulsim. All rights reserved
+    HomeMatic D1 V1.0.0 (hw:v1.0) - Copyright (C) 2016 vulsim. All rights reserved
+	
 */
-
-#include <stdlib.h>
-#include <string.h>
-#include <avr/io.h>
-#include <avr/delay.h>
-#include <avr/eeprom.h>
 
 #include "FreeRTOSConfig.h"
 #include "FreeRTOS.h"
-#include "task.h"
 
-#include "runtime_config.h"
+#include "shared_context.h"
 #include "dimmer_task.h"
+#include "service_task.h"
 
-runtime_config_t ee_runtime_config;
+shared_context_t shared_context;
+
+void setup_hardware(void) {
+
+}
 
 int main(void) {
 
-	initialize();
+	setup_hardware();
 	
-	read_runtime_config();
+	v_setup_service_task(&shared_context);
 	
-	xTaskCreate(v_dimmer_task, "dim", configMINIMAL_STACK_SIZE, NULL, 1, NULL);
+	v_setup_dimmer_task(&shared_context);
+	
+	vTaskStartScheduler();
 
 	return 0;
 }
-
-void initialize(void) {
-
-}
-
-void read_runtime_config() {
-
-}
-
-void write_runtime_config() {
-
-}
-
