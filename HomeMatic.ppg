@@ -1,1 +1,1 @@
-<Workspace name="HomeMatic"><Project path="D1\D1.pnproj"></Project></Workspace>
+<Workspace name="HomeMatic"><Project path="D1\D1.pnproj"></Project><Project path="Bootloader\Bootloader.pnproj"></Project></Workspace>
