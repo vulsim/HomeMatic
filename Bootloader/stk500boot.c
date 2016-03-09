@@ -98,7 +98,7 @@ LICENSE:
 #define PROG_PORT  PORTD
 #define PROG_DDR   DDRD
 #define PROG_IN    PIND
-#define PROG_PIN   PIND2
+#define PROG_PIN   PD2
 
 /*
  * Active-low LED on pin "PROGLED_PIN" on port "PROGLED_PORT" 
@@ -334,18 +334,18 @@ static unsigned char recchar(void);
  * since this bootloader is not linked against the avr-gcc crt1 functions,
  * to reduce the code size, we need to provide our own initialization
  */
-void __jumpMain     (void) __attribute__ ((naked)) __attribute__ ((section (".init9")));
+// void __jumpMain     (void) __attribute__ ((naked)) __attribute__ ((section (".init9")));
 
-void __jumpMain(void)
-{    
-    asm volatile ( ".set __stack, %0" :: "i" (RAMEND) );       // init stack
-    asm volatile ( "clr __zero_reg__" );                       // GCC depends on register r1 set to 0
-    asm volatile ( "out %0, __zero_reg__" :: "I" (_SFR_IO_ADDR(SREG)) );  // set SREG to 0
-#ifndef REMOVE_PROG_PIN_PULLUP   
-    PROG_PORT |= (1<<PROG_PIN);                                // Enable internal pullup
-#endif    
-    asm volatile ( "rjmp main");                               // jump to main()
-}
+// void __jumpMain(void)
+// {    
+//     asm volatile ( ".set __stack, %0" :: "i" (RAMEND) );       // init stack
+//     asm volatile ( "clr __zero_reg__" );                       // GCC depends on register r1 set to 0
+//     asm volatile ( "out %0, __zero_reg__" :: "I" (_SFR_IO_ADDR(SREG)) );  // set SREG to 0
+// #ifndef REMOVE_PROG_PIN_PULLUP   
+//     PROG_PORT |= (1<<PROG_PIN);                                // Enable internal pullup
+// #endif    
+//     asm volatile ( "rjmp main");                               // jump to main()
+// }
 
 
 /*
@@ -382,6 +382,8 @@ int main(void)
     unsigned char   c, *p;
     unsigned char   isLeave = 0;
 
+    PROG_DDR &= ~(1<<PROG_PIN);
+    PROG_PORT |= (1<<PROG_PIN);
 
     /*
      * Branch to bootloader or application code ?
@@ -391,7 +393,7 @@ int main(void)
 #ifndef REMOVE_BOOTLOADER_LED
         /* PROG_PIN pulled low, indicate with LED that bootloader is active */
         PROGLED_DDR  |= (1<<PROGLED_PIN);
-        PROGLED_PORT &= ~(1<<PROGLED_PIN);
+        PROGLED_PORT |= (1<<PROGLED_PIN);
 #endif
         /*
          * Init UART

@@ -36,11 +36,9 @@ TARGET = stk500boot
 
 
 # Bootloader
-# Please adjust if using a different AVR using following formula:
-# BOOTLOADER_ADDRESS =  2 * ( (AVR-Flash size in words) - (boot-size in words) )
-# e.g. for ATmega8 and 512 words boot size:  2 * ( 4096 - 512 )   or  2 * ( 0x1000 - 0x200 ) = 0x1C00
-#      for ATmega32 and 512 words boot size: 2 * ( 16384 - 512 )  or  2 * ( 0x4000 - 0x200 ) = 0x7C00
-BOOTLOADER_ADDRESS = 0x7b40
+# H fuse should be: 0xD8
+# Example: avrdude ... -U hfuse:w:0xD8:m
+BOOTLOADER_ADDRESS = 0x3800
 
 
 # List C source files here. (C dependencies are automatically generated.)
