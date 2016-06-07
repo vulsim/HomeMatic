@@ -2,13 +2,17 @@
 #ifndef SETTINGS_H
 #define SETTINGS_H
 
-#include <avr/io.h>
-
 typedef struct {
-	uint8_t dima_level1;
-	uint8_t dima_level2;	
-	uint8_t dimb_level1;
-	uint8_t dimb_level2;
+	
+	unsigned soft_on : 1;
+	
+	uint8_t t_soft_on;
+
+	uint8_t dim_level_min;
+
+	uint8_t dim_level_max;
+
+	uint8_t dim_level;
 
 } settings_t;
 

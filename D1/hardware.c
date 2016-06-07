@@ -2,18 +2,61 @@
 #include "hardware.h"
 #include <avr/eeprom.h>
 
-void v_setup_hardware() {
+settings_t settings;
+
+settings_t ee_settings EEMEM = {
+
+	.soft_on = 1,	
+	
+	.t_soft_on = 0x96,
+	
+	.dim_level_min = 0x0d,
+
+	.dim_level_max = 0xff,
+
+	.dim_level = 0x4d
+};
+
+uint8_t is_key_pressed(void) {
 
 }
 
-uint8_t is_ac_gate(void) {
-	return 0;
-}
-
-uint8_t is_power_on(void) {
-	return 0;
-}
-
-void set_dimmer_output(uint8_t power_on, uint8_t a_on, uint8_t b_on) {
+void dim_on(void) {
 
 }
+
+void dim_off(void) {
+
+}
+
+void rled_on(void) {
+
+}
+
+void rled_off(void) {
+
+}
+
+void gled_on(void) {
+
+}
+
+void gled_off(void) {
+	
+}
+
+void read_settings(void) {
+	
+	eeprom_read_block(&settings, &ee_settings, sizeof(settings_t));
+}
+
+void write_settings(void) {
+	
+	eeprom_write_block(&settings, &ee_settings, sizeof(settings_t));
+}
+
+void v_hardware_setup(void) {
+
+	read_settings();
+}
+
