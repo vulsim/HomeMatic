@@ -3,7 +3,6 @@
 
 #include "FreeRTOS.h"
 #include "task.h"
-#include <avr/io.h>
 
 typedef struct {
 	

@@ -1,6 +1,7 @@
 
 #include "hardware.h"
 #include <avr/eeprom.h>
+#include <avr/io.h>
 
 settings_t settings;
 
@@ -17,8 +18,37 @@ settings_t ee_settings EEMEM = {
 	.dim_level = 0x4d
 };
 
-uint8_t is_key_pressed(void) {
+/* Internal */
 
+
+/* Hardware interaction */
+
+void timer0_enable_isr(void) {
+	TIMSK0 |= 1 << TOIE0;
+}
+
+void timer0_disable_isr() {
+	TIMSK0 &= 0xff ^ (1<<TOIE0);
+}
+
+void timer0_set_counter(uint8_t value) {
+	TCNT0 = value;
+}
+
+uint8_t timer0_get_counter(void) {
+	return TCNT0;
+}
+
+uint8_t is_key_pressed(void) {
+	return 0;
+}
+
+void timer0_start(void) {
+    TCCR0B = (1<<CS02) | (1<<CS00);
+}
+
+void timer0_stop(void) {
+	TCCR0B = 0;
 }
 
 void dim_on(void) {
@@ -57,6 +87,13 @@ void write_settings(void) {
 
 void v_hardware_setup(void) {
 
+	TCCR0A = 0;
+	TCCR0B = 0;
+
 	read_settings();
+
+	timer0_stop();
+	timer0_disable_isr();
+	timer0_set_counter(0);
 }
 

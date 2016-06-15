@@ -1,2 +1,2 @@
 
-void v_input_setup(void);
+void v_input_task_setup(void);
