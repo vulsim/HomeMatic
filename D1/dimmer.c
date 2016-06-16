@@ -78,7 +78,7 @@ ISR(INT0_vect) {
 
 ISR(TIMER0_OVF_vect) {
 
-	timer0_set_counter(0);
+	//timer0_set_counter(0); 
 
 	if (params.on_state == 1) {
 		dim_on();

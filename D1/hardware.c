@@ -89,6 +89,7 @@ void v_hardware_setup(void) {
 
 	TCCR0A = 0;
 	TCCR0B = 0;
+	EICRA = (1<<ISC01) | (1<<ISC00);
 
 	read_settings();
 

@@ -88,6 +88,7 @@ SRC += input.c
 SRC += free_rtos/tasks.c
 SRC += free_rtos/list.c
 SRC += free_rtos/port.c
+SRC += free_rtos/queue.c
 SRC += free_rtos/heap_2.c
 
 
