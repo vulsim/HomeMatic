@@ -1,8 +1,7 @@
 
 #include "input.h"
-#include "hardware.h"
 
-#include "FreeRTOS.h"
+#include "hardware.h"
 #include "task.h"
 
 typedef struct {

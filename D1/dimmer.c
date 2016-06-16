@@ -3,7 +3,6 @@
 
 #include <avr/interrupt.h>
 #include <avr/pgmspace.h>
-#include "FreeRTOS.h"
 #include "task.h"
 #include "hardware.h"
 #include "input.h"
@@ -50,24 +49,24 @@ ISR(INT0_vect) {
 	timer0_stop();
 	timer0_disable_isr();
 
-	dimmer_task_parameters_t parameters = &dimmer_task_parameters;
-	parameters.wait_sync_state = 0;
+	dimmer_task_parameters_t *parameters = &dimmer_task_parameters;
+	parameters->wait_sync_state = 0;
 	
-	if (parameters.on_state && !parameters.fault_state) {		
-		parameters.dim_ref_value = parameters.dim_value + timer0_get_counter();		
+	if (parameters->on_state && !parameters->fault_state) {		
+		parameters->dim_ref_value = parameters->dim_value + timer0_get_counter();		
 
-		if (parameters.dim_level == 100) {
-			parameters.dim_value = 0;
+		if (parameters->dim_level == 100) {
+			parameters->dim_value = 0;
 			
 			timer0_set_counter(0);
 			timer0_start();
 			dim_on();
 			
 			return;
-		} else if (parameters.dim_ref_value) {
-			parameters.dim_value = parameters.dim_ref_value * power_map_table[parameters.dim_level] / 0xff;
+		} else if (parameters->dim_ref_value) {
+			parameters->dim_value = parameters->dim_ref_value * power_map_table[parameters->dim_level] / 0xff;
 
-			timer0_set_counter(parameters.dim_ref_value - parameters.dim_value);
+			timer0_set_counter(parameters->dim_ref_value - parameters->dim_value);
 			timer0_enable_isr();
 			timer0_start();
 
@@ -76,7 +75,7 @@ ISR(INT0_vect) {
 			timer0_start();
 		}
 	} else {
-		parameters.dim_ref_value = 0;
+		parameters->dim_ref_value = 0;
 	}
 
 	dim_off();
@@ -84,18 +83,18 @@ ISR(INT0_vect) {
 
 ISR(TIMER0_OVF_vect) {
 
-	dimmer_task_parameters_t parameters = &dimmer_task_parameters;
+	dimmer_task_parameters_t *parameters = &dimmer_task_parameters;
 
-	if (parameters.on_state) {
-		if (parameters.wait_sync_state) {
+	if (parameters->on_state) {
+		if (parameters->wait_sync_state) {
 			dim_off();
 			timer0_stop();
 			timer0_disable_isr();
 			timer0_set_counter(0);		
-			parameters.dim_ref_value = 0;
+			parameters->dim_ref_value = 0;
 		} else {
 			dim_on();
-			parameters.wait_sync_state = 1;
+			parameters->wait_sync_state = 1;
 		}
 	}	
 }
@@ -113,7 +112,7 @@ void v_dimmer_task(dimmer_task_parameters_t *parameters) {
 
 				if (parameters->on_state) {
 					if (input.is_key_pressed) {
-						if (!parameters-<fault_state) {			
+						if (!parameters->fault_state) {			
 							if (input.key_press_duration > 20 && 
 								input.key_press_duration < 25) {
 								parameters->from_level = parameters->dim_level;
@@ -128,7 +127,7 @@ void v_dimmer_task(dimmer_task_parameters_t *parameters) {
 									}
 								} else {
 									if (parameters->from_level - level <= settings.dim_level_min) {
-										parameters->dim_level = dim_level_min;
+										parameters->dim_level = settings.dim_level_min;
 									} else {
 										parameters->dim_level = parameters->from_level + level;
 									}
@@ -136,14 +135,14 @@ void v_dimmer_task(dimmer_task_parameters_t *parameters) {
 							}
 						} 						
 					} else if (input.key_press_duration > 25) {
-						settings->dim_level = parameters->dim_level;
+						settings.dim_level = parameters->dim_level;
 						write_settings();
 					} else if (input.key_press_duration > 3) {
 						parameters->on_state = 0;
 					}									
 				} else if (!input.is_key_pressed && 
 					input.key_press_duration > 3 &&
-					!parameters-<fault_state) {
+					!parameters->fault_state) {
 					parameters->on_state = 1;
 				}
 

@@ -22,6 +22,8 @@ display_task_parameters_t display_task_parameters;
 void v_display_task(display_task_parameters_t *parameters) {
 
 	for(;;) {
+		dimmer_message_t dimmer;
+
 		if (parameters->blink_counter < 50) {
 			parameters->blink_counter++;
 		} else {
@@ -39,7 +41,7 @@ void v_display_task(display_task_parameters_t *parameters) {
 					rled_off();
 				}
 				gled_off();
-			} else if (dimmer->wait_sync_state) {
+			} else if (dimmer.wait_sync_state) {
 				if (parameters->light_on) {
 					rled_on();					
 					gled_on();
@@ -47,7 +49,7 @@ void v_display_task(display_task_parameters_t *parameters) {
 					rled_off();
 					gled_off();
 				}				
-			} else if (dimmer->on_state) {
+			} else if (dimmer.on_state) {
 				rled_off();
 				gled_on();
 			} else {

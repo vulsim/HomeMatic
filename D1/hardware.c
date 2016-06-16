@@ -19,7 +19,6 @@ settings_t ee_settings EEMEM = {
 
 uint8_t search_sensors(void) {
 
-	uint8_t i;
 	uint8_t id[OW_ROMCODE_SIZE];
 	uint8_t diff, sensors;
 	
@@ -29,7 +28,7 @@ uint8_t search_sensors(void) {
 	
 	diff = OW_SEARCH_FIRST;
 
-	while (diff != OW_LAST_DEVICE && sensors < MAXSENSORS) {
+	while (diff != OW_LAST_DEVICE && sensors < 5) {
 		DS18X20_find_sensor(&diff, &id[0]);
 		
 		if (diff == OW_PRESENCE_ERR) {
@@ -38,10 +37,6 @@ uint8_t search_sensors(void) {
 		
 		if (diff == OW_DATA_ERR) {
 			break;
-		}
-		
-		for (i = 0; i < OW_ROMCODE_SIZE; i++) {
-			gSensorIDs[sensors][i] = id[i];
 		}
 		
 		sensors++;
