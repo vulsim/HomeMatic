@@ -7,7 +7,6 @@
 #include "FreeRTOSConfig.h"
 #include "FreeRTOS.h"
 #include "task.h"
-
 #include "hardware.h"
 #include "dimmer.h"
 #include "display.h"

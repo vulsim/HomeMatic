@@ -2,10 +2,11 @@
 #include "display.h"
 
 #include <avr/io.h>
-#include "FreeRTOS.h"
-#include "task.h"
 #include "dimmer.h"
+#include "task.h"
 #include "hardware.h"
+
+#define DISPLAY_DELAY_TICKS		20000 / TICK_SIZE_US
 
 typedef struct {
 	
@@ -60,7 +61,7 @@ void v_display_task(display_task_parameters_t *parameters) {
 			taskEXIT_CRITICAL(); 
 		}
 
-        vTaskDelay(20000 / TICK_SIZE_US);
+        vTaskDelay(DISPLAY_DELAY_TICKS);
     }
 }
 

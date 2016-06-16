@@ -7,6 +7,8 @@
 #include "hardware.h"
 #include "input.h"
 
+#define DIMMER_DELAY_TICKS		20000 / TICK_SIZE_US
+
 const uint8_t power_map_table[100] PROGMEM ={
 	0x03, 0x08, 0x0B, 0x0E, 0x11, 0x13, 0x16, 0x18, 0x1A, 0x1C, 
 	0x1E, 0x20, 0x22, 0x24, 0x26, 0x28, 0x29, 0x2B, 0x2D, 0x2E, 
@@ -156,7 +158,7 @@ void v_dimmer_task(dimmer_task_parameters_t *parameters) {
 			};
 
 			xQueueSend(dimmer_queue, &dimmer, 10);
-        	vTaskDelay(20000 / TICK_SIZE_US);
+        	vTaskDelay(DIMMER_DELAY_TICKS);
         }
 
         int16_t temp = 30000;

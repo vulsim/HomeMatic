@@ -4,6 +4,8 @@
 #include "hardware.h"
 #include "task.h"
 
+#define INPUT_DELAY_TICKS		(25000 / TICK_SIZE_US) * 2
+
 typedef struct {
 
 	uint8_t key_press_duration;
@@ -36,7 +38,7 @@ void v_input_task(input_task_parameters_t *parameters) {
 		}
 
 		xQueueSend(input_queue, &input, 10);
-        vTaskDelay(50000 / TICK_SIZE_US);
+        vTaskDelay(INPUT_DELAY_TICKS);
     }
 }
 
