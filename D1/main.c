@@ -17,16 +17,20 @@ int main(void) {
 
 	cli();
 
-	v_hardware_setup();
+	if (v_hardware_setup()) {
 	
-	v_dimmer_task_setup();
-	
-	v_display_task_setup();
-	
-	v_input_task_setup();
-	
-	vTaskStartScheduler();
+		v_dimmer_task_setup();
+		
+		v_display_task_setup();
+		
+		v_input_task_setup();
 
+		sei();
+		
+		vTaskStartScheduler();
+	}
+
+	dim_off();
 	rled_on();
 
 	return 0;

@@ -5,7 +5,7 @@ typedef struct {
 
 	uint8_t is_key_pressed : 1;
 
-	uint8_t key_pressed_duration;
+	uint8_t key_press_duration;
 
 } input_message_t;
 
