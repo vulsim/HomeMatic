@@ -6,6 +6,7 @@
 #include "task.h"
 #include "hardware.h"
 #include "input.h"
+#include "sensor.h"
 
 #define DIMMER_DELAY_TICKS		20000 / TICK_SIZE_US
 
@@ -37,10 +38,12 @@ typedef struct {
 	uint8_t wait_sync_state : 1;	
 
 	uint8_t fault_state : 1;
+
+	uint8_t dimmer_state;
 	
 } dimmer_task_parameters_t;
 
-dimmer_task_parameters_t dimmer_task_parameters;
+dimmer_task_parameters_t dimmer_params;
 
 xQueueHandle dimmer_queue;
 
@@ -51,24 +54,23 @@ ISR(INT0_vect) {
 	timer0_stop();
 	timer0_disable_isr();
 
-	dimmer_task_parameters_t *parameters = &dimmer_task_parameters;
-	parameters->wait_sync_state = 0;
+	dimmer_params.wait_sync_state = 0;
 	
-	if (parameters->on_state && !parameters->fault_state) {		
-		parameters->dim_ref_value = parameters->dim_value + timer0_get_counter();		
+	if (dimmer_params.on_state && !dimmer_params.fault_state) {		
+		dimmer_params.dim_ref_value = dimmer_params.dim_value + timer0_get_counter();		
 
-		if (parameters->dim_level == 100) {
-			parameters->dim_value = 0;
+		if (dimmer_params.dim_level == 100) {
+			dimmer_params.dim_value = 0;
 			
 			timer0_set_counter(0);
 			timer0_start();
 			dim_on();
 			
 			return;
-		} else if (parameters->dim_ref_value) {
-			parameters->dim_value = parameters->dim_ref_value * power_map_table[parameters->dim_level] / 0xff;
+		} else if (dimmer_params.dim_ref_value) {
+			dimmer_params.dim_value = dimmer_params.dim_ref_value * power_map_table[dimmer_params.dim_level] / 0xff;
 
-			timer0_set_counter(parameters->dim_ref_value - parameters->dim_value);
+			timer0_set_counter(dimmer_params.dim_ref_value - dimmer_params.dim_value);
 			timer0_enable_isr();
 			timer0_start();
 
@@ -77,26 +79,23 @@ ISR(INT0_vect) {
 			timer0_start();
 		}
 	} else {
-		parameters->dim_ref_value = 0;
+		dimmer_params.dim_ref_value = 0;
 	}
 
 	dim_off();
 }
 
 ISR(TIMER0_OVF_vect) {
-
-	dimmer_task_parameters_t *parameters = &dimmer_task_parameters;
-
-	if (parameters->on_state) {
-		if (parameters->wait_sync_state) {
+	if (dimmer_params.on_state) {
+		if (dimmer_params.wait_sync_state) {
 			dim_off();
 			timer0_stop();
 			timer0_disable_isr();
 			timer0_set_counter(0);		
-			parameters->dim_ref_value = 0;
+			dimmer_params.dim_ref_value = 0;
 		} else {
 			dim_on();
-			parameters->wait_sync_state = 1;
+			dimmer_params.wait_sync_state = 1;
 		}
 	}	
 }
@@ -106,81 +105,78 @@ ISR(TIMER0_OVF_vect) {
 void v_dimmer_task(dimmer_task_parameters_t *parameters) {
 
 	for(;;) {
-        //for (uint8_t i = 0; i < 255; i++) {
-        	input_message_t input;
+        input_message_t input;
 
-			if (xQueueReceive(input_queue, &input, 20)) {
-				taskENTER_CRITICAL();
+		if (xQueueReceive(input_queue, &input, 20)) {
+			taskENTER_CRITICAL();
 
-				if (parameters->on_state) {
-					if (input.is_key_pressed) {
-						if (!parameters->fault_state) {			
-							if (input.key_press_duration > 20 && 
-								input.key_press_duration < 25) {
-								parameters->from_level = parameters->dim_level;
-							} else if (input.key_press_duration > 25) {
-								uint8_t level = input.key_press_duration - 25;
-
-								if (parameters->from_level < settings.dim_level_max) {
-									if (parameters->from_level + level >= settings.dim_level_max) {
-										parameters->dim_level = settings.dim_level_max;
-									} else {
-										parameters->dim_level = parameters->from_level + level;
-									}
-								} else {
-									if (parameters->from_level - level <= settings.dim_level_min) {
-										parameters->dim_level = settings.dim_level_min;
-									} else {
-										parameters->dim_level = parameters->from_level + level;
-									}
-								}
-							}
-						} 						
-					} else if (input.key_press_duration > 25) {
-						settings.dim_level = parameters->dim_level;
-						write_settings();
-					} else if (input.key_press_duration > 3) {
+			if (parameters->on_state) {
+				if (parameters->fault_state) {
+					if (input.key_press_duration > 3) {
 						parameters->on_state = 0;
-					}									
-				} else if (!input.is_key_pressed && 
-					input.key_press_duration > 3 &&
-					!parameters->fault_state) {
-					parameters->on_state = 1;
+					}	
+				} else if (input.is_key_pressed) {								
+					if (input.key_press_duration > 20 && 
+						input.key_press_duration < 25) {
+						parameters->from_level = parameters->dim_level;
+					} else if (input.key_press_duration > 25) {
+						uint8_t level = input.key_press_duration - 25;
+
+						if (parameters->from_level < settings.dim_level_max) {
+							if (parameters->from_level + level >= settings.dim_level_max) {
+								parameters->dim_level = settings.dim_level_max;
+							} else {
+								parameters->dim_level = parameters->from_level + level;
+							}
+						} else {
+							if (parameters->from_level - level <= settings.dim_level_min) {
+								parameters->dim_level = settings.dim_level_min;
+							} else {
+								parameters->dim_level = parameters->from_level + level;
+							}
+						}
+					}
+				} else if (input.key_press_duration > 25) {
+					settings.dim_level = parameters->dim_level;
+					write_settings();
+				} else if (input.key_press_duration > 3) {
+					parameters->on_state = 0;
 				}
-
-				taskEXIT_CRITICAL();
+			} else if (!input.is_key_pressed && 
+				input.key_press_duration > 3 &&
+				!parameters->fault_state) {
+				parameters->on_state = 1;
 			}
 
-			dimmer_message_t dimmer = {
-				.on_state = parameters->on_state,
-				.wait_sync_state = parameters->wait_sync_state,
-				.fault_state = parameters->fault_state
-			};
+			taskEXIT_CRITICAL();
+        }
 
-			xQueueSend(dimmer_queue, &dimmer, 10);
-        	vTaskDelay(DIMMER_DELAY_TICKS);
-        //}
+        sensor_message_t sensor;
 
+        if (xQueueReceive(sensor_queue, &sensor, 20)) {
+        	taskENTER_CRITICAL();
 
-		//vTaskDelay(SENSOR_MEASURE_TICKS);
-		
-        /*int16_t temp = 30000;
-
-		if (sensor_measure_temp()) {
-			vTaskDelay(SENSOR_MEASURE_TICKS);			
-			temp = sensor_read_temp();
-		}
-
-		taskENTER_CRITICAL();
-		if (parameters->fault_state) {
-			if (temp < FAULT_TEMP_MIN) {
-				parameters->fault_state = 0;
+        	if (sensor.fault_state) {
+        		parameters->fault_state = 1;
+        	} else if (parameters->fault_state) {
+				if (sensor.temp < FAULT_TEMP_MIN) {
+					parameters->fault_state = 0;
+				}
+			} else if (sensor.temp >= FAULT_TEMP_MAX) {
+				parameters->fault_state = 1;
 			}
-		} else if (temp >= FAULT_TEMP_MAX) {
-			parameters->fault_state = 1;
-		}
 
-		taskEXIT_CRITICAL();*/
+			taskEXIT_CRITICAL();
+        }
+
+        dimmer_message_t dimmer = {
+			.on_state = parameters->on_state,
+			.wait_sync_state = parameters->wait_sync_state,
+			.fault_state = parameters->fault_state
+		};
+
+		xQueueSend(dimmer_queue, &dimmer, 10);
+    	vTaskDelay(DIMMER_DELAY_TICKS);
     }
 
     dim_off();
@@ -190,11 +186,11 @@ void v_dimmer_task(dimmer_task_parameters_t *parameters) {
 
 void v_dimmer_task_setup(void) {
 
-	dimmer_task_parameters.dim_level = settings.dim_level;
-	dimmer_task_parameters.on_state = 0;
-	dimmer_task_parameters.wait_sync_state = 1;
+	dimmer_params.dim_level = settings.dim_level;
+	dimmer_params.on_state = 0;
+	dimmer_params.wait_sync_state = 1;
 	
 	dimmer_queue = xQueueCreate(5, sizeof(dimmer_message_t));
 	
-	xTaskCreate(v_dimmer_task, "DM", configMINIMAL_STACK_SIZE, &dimmer_task_parameters, 1, NULL);
+	xTaskCreate(v_dimmer_task, "DM", configMINIMAL_STACK_SIZE, &dimmer_params, 1, NULL);
 }

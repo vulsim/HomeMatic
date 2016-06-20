@@ -11,6 +11,7 @@
 #include "dimmer.h"
 #include "display.h"
 #include "input.h"
+#include "sensor.h"
 
 int main(void) {
 
@@ -18,11 +19,13 @@ int main(void) {
 
 	if (v_hardware_setup()) {
 	
-		v_dimmer_task_setup();
-		
-		v_display_task_setup();
-		
 		v_input_task_setup();
+
+		v_sensor_task_setup();
+
+		v_display_task_setup();
+
+		v_dimmer_task_setup();
 
 		sei();
 		

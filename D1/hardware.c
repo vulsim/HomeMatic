@@ -146,11 +146,11 @@ uint8_t v_hardware_setup(void) {
 	rled_off();
 	gled_off();
 
-	//ow_set_bus(&PINC, &PORTC, DDRC, PC1);
+	ow_set_bus(&PINC, &PORTC, DDRC, PC1);
 
-	//if (search_sensors() != 1) {
-	//	return 0;
-	//}
+	if (search_sensors() != 1) {
+		return 0;
+	}
 
 	return 1;
 }

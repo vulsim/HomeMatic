@@ -4,7 +4,7 @@
 #include "hardware.h"
 #include "task.h"
 
-#define INPUT_DELAY_TICKS		(25000 / TICK_SIZE_US) * 2
+#define INPUT_DELAY_TICKS		25000 / TICK_SIZE_US
 
 typedef struct {
 
@@ -12,7 +12,7 @@ typedef struct {
 
 } input_task_parameters_t;
 
-input_task_parameters_t input_task_parameters;
+input_task_parameters_t input_params;
 
 xQueueHandle input_queue;
 
@@ -26,15 +26,16 @@ void v_input_task(input_task_parameters_t *parameters) {
 		taskENTER_CRITICAL();
 		
 		if (is_key_pressed()) {
+			input.is_key_pressed = 1;
+			input.key_press_duration = parameters->key_press_duration;
+
 			if (parameters->key_press_duration < 125) { 
 				parameters->key_press_duration += 1;
 			}
-
-			input.is_key_pressed = 1;
-			input.key_press_duration = parameters->key_press_duration;
 		} else {
 			input.is_key_pressed = 0;			
 			input.key_press_duration = parameters->key_press_duration;
+			
 			parameters->key_press_duration = 0;
 		}
 		
@@ -49,9 +50,9 @@ void v_input_task(input_task_parameters_t *parameters) {
 
 void v_input_task_setup(void) {
 
-	input_task_parameters.key_press_duration = 0;
+	input_params.key_press_duration = 0;
 
 	input_queue = xQueueCreate(5, sizeof(input_message_t));
 
-	xTaskCreate(v_input_task, "IN", configMINIMAL_STACK_SIZE, &input_task_parameters, 1, NULL);
+	xTaskCreate(v_input_task, "KS", configMINIMAL_STACK_SIZE, &input_params, 1, NULL);
 }

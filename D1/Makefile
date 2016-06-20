@@ -85,6 +85,7 @@ SRC += hardware.c
 SRC += dimmer.c
 SRC += display.c
 SRC += input.c
+SRC += sensor.c
 SRC += onewire.c
 SRC += ds18x20.c
 SRC += crc8.c
