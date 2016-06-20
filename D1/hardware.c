@@ -6,7 +6,7 @@
 
 settings_t settings;
 
-settings_t ee_settings EEMEM = {
+settings_t ee_settings /*EEMEM*/ = {
 	
 	.dim_level_min = 0x05,
 
@@ -83,7 +83,7 @@ uint8_t timer0_get_counter(void) {
 }
 
 uint8_t is_key_pressed(void) {
-	return !(PIND & (1<<PD4));
+	return !(PIND & (1<<PD6));
 }
 
 void timer0_start(void) {
@@ -103,11 +103,11 @@ void dim_off(void) {
 }
 
 void rled_on(void) {
-	PORTC |= 1<<PC1;
+	PORTC |= 1<<PC3;
 }
 
 void rled_off(void) {
-	PORTC &= 0xFF ^ (1<<PC1);
+	PORTC &= 0xFF ^ (1<<PC3);
 }
 
 void gled_on(void) {
@@ -120,12 +120,12 @@ void gled_off(void) {
 
 void read_settings(void) {
 	
-	eeprom_read_block(&settings, &ee_settings, sizeof(settings_t));
+	//eeprom_read_block(&settings, &ee_settings, sizeof(settings_t));
 }
 
 void write_settings(void) {
 	
-	eeprom_write_block(&settings, &ee_settings, sizeof(settings_t));
+	//eeprom_write_block(&settings, &ee_settings, sizeof(settings_t));
 }
 
 uint8_t v_hardware_setup(void) {
@@ -133,7 +133,7 @@ uint8_t v_hardware_setup(void) {
 	TCCR0A = 0;
 	TCCR0B = 0;
 	EICRA = (1<<ISC01) | (1<<ISC00);
-	DDRC = (1<<PC0) | (1<<PC1) | (1<<PC2);
+	DDRC = (1<<PC0) | (1<<PC2) | (1<<PC3);
 	DDRD = 0;
 
 	read_settings();
@@ -146,11 +146,11 @@ uint8_t v_hardware_setup(void) {
 	rled_off();
 	gled_off();
 
-	ow_set_bus(&PIND, &PORTD, DDRD, PD3);
+	//ow_set_bus(&PINC, &PORTC, DDRC, PC1);
 
-	if (search_sensors() != 1) {
-		return 0;
-	}
+	//if (search_sensors() != 1) {
+	//	return 0;
+	//}
 
 	return 1;
 }

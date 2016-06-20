@@ -42,7 +42,7 @@ typedef struct {
 
 dimmer_task_parameters_t dimmer_task_parameters;
 
-QueueHandle_t dimmer_queue;
+xQueueHandle dimmer_queue;
 
 /* Base interrupts handlers */
 
@@ -106,10 +106,10 @@ ISR(TIMER0_OVF_vect) {
 void v_dimmer_task(dimmer_task_parameters_t *parameters) {
 
 	for(;;) {
-        for (uint8_t i = 0; i < 255; i++) {
+        //for (uint8_t i = 0; i < 255; i++) {
         	input_message_t input;
 
-			if (xQueueReceive(input_queue, &input, 10)) {
+			if (xQueueReceive(input_queue, &input, 20)) {
 				taskENTER_CRITICAL();
 
 				if (parameters->on_state) {
@@ -159,9 +159,12 @@ void v_dimmer_task(dimmer_task_parameters_t *parameters) {
 
 			xQueueSend(dimmer_queue, &dimmer, 10);
         	vTaskDelay(DIMMER_DELAY_TICKS);
-        }
+        //}
 
-        int16_t temp = 30000;
+
+		//vTaskDelay(SENSOR_MEASURE_TICKS);
+		
+        /*int16_t temp = 30000;
 
 		if (sensor_measure_temp()) {
 			vTaskDelay(SENSOR_MEASURE_TICKS);			
@@ -177,7 +180,7 @@ void v_dimmer_task(dimmer_task_parameters_t *parameters) {
 			parameters->fault_state = 1;
 		}
 
-		taskEXIT_CRITICAL();
+		taskEXIT_CRITICAL();*/
     }
 
     dim_off();
@@ -187,9 +190,11 @@ void v_dimmer_task(dimmer_task_parameters_t *parameters) {
 
 void v_dimmer_task_setup(void) {
 
-	dimmer_queue = xQueueCreate(5, sizeof(dimmer_message_t));
-
 	dimmer_task_parameters.dim_level = settings.dim_level;
+	dimmer_task_parameters.on_state = 0;
+	dimmer_task_parameters.wait_sync_state = 1;
+	
+	dimmer_queue = xQueueCreate(5, sizeof(dimmer_message_t));
 	
 	xTaskCreate(v_dimmer_task, "DM", configMINIMAL_STACK_SIZE, &dimmer_task_parameters, 1, NULL);
 }

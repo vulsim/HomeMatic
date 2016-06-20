@@ -12,6 +12,6 @@ typedef struct {
 
 } dimmer_message_t;
 
-extern QueueHandle_t dimmer_queue;
+extern xQueueHandle dimmer_queue;
 
 void v_dimmer_task_setup(void);

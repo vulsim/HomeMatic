@@ -42,25 +42,27 @@ void v_display_task(display_task_parameters_t *parameters) {
 					rled_off();
 				}
 				gled_off();
-			} else if (dimmer.wait_sync_state) {
-				if (parameters->light_on) {
-					rled_on();					
-					gled_on();
+			} else if (dimmer.on_state) {
+				if (dimmer.wait_sync_state) {
+					if (parameters->light_on) {
+						rled_on();					
+						gled_on();
+					} else {
+						rled_off();
+						gled_off();
+					}				
 				} else {
 					rled_off();
-					gled_off();
-				}				
-			} else if (dimmer.on_state) {
-				rled_off();
-				gled_on();
+					gled_on();
+				}
 			} else {
 				rled_on();
 				gled_on();
 			}
-
+			
 			taskEXIT_CRITICAL(); 
 		}
-
+		
         vTaskDelay(DISPLAY_DELAY_TICKS);
     }
 }

@@ -10,6 +10,6 @@ typedef struct {
 
 } input_message_t;
 
-extern QueueHandle_t input_queue;
+extern xQueueHandle input_queue;
 
 void v_input_task_setup(void);
