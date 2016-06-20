@@ -22,11 +22,11 @@ uint8_t search_sensors(void) {
 	uint8_t id[OW_ROMCODE_SIZE];
 	uint8_t diff, sensors;
 	
-	ow_reset();
-
 	sensors = 0;
 	
 	diff = OW_SEARCH_FIRST;
+
+	ow_reset();
 
 	while (diff != OW_LAST_DEVICE && sensors < 5) {
 		DS18X20_find_sensor(&diff, &id[0]);
@@ -44,7 +44,6 @@ uint8_t search_sensors(void) {
 	
 	return sensors;
 }
-
 
 /* Hardware interaction */
 
