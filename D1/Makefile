@@ -41,7 +41,7 @@
 
 
 # MCU name
-MCU = atmega328
+MCU = m328p
 
 
 # Processor frequency.
@@ -82,18 +82,9 @@ OBJDIR = .
 # List C source files here. (C dependencies are automatically generated.)
 SRC = $(TARGET).c
 SRC += hardware.c
-SRC += dimmer.c
-SRC += display.c
-SRC += input.c
-SRC += sensor.c
 SRC += onewire.c
 SRC += ds18x20.c
 SRC += crc8.c
-SRC += free_rtos/tasks.c
-SRC += free_rtos/list.c
-SRC += free_rtos/port.c
-SRC += free_rtos/queue.c
-SRC += free_rtos/heap_2.c
 
 
 # List C++ source files here. (C dependencies are automatically generated.)
