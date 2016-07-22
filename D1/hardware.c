@@ -8,11 +8,11 @@ settings_t settings;
 
 settings_t ee_settings /*EEMEM*/ = {
 	
-	.dim_level_min = 0x05,
+	.dim_level_min = 5,
 
-	.dim_level_max = 0x64,
+	.dim_level_max = 100,
 
-	.dim_level = 0x32
+	.dim_level = 5
 };
 
 /* Sensor */
@@ -95,7 +95,8 @@ uint8_t is_key_pressed(void) {
 }
 
 void timer0_start(void) {
-    TCCR0B = (1<<CS02) | (1<<CS00);
+	// INFO: clk/256
+    TCCR0B = 1<<CS02;
 }
 
 void timer0_stop(void) {
@@ -131,6 +132,7 @@ uint16_t timer1_get_counter(void) {
 }
 
 void timer1_start(void) {
+	// INFO: clk/256
     TCCR1B = 1<<CS12;
 }
 
@@ -223,8 +225,6 @@ uint8_t hardware_setup(void) {
 
 	timer1_setup();
 	
-	read_settings();
-
 	/*ow_set_bus(&PINC, &PORTC, DDRC, PC1);
 
 	if (search_sensors() != 1) {
