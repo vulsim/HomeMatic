@@ -33,10 +33,10 @@ uint8_t slide_down : 1;
 uint8_t dimmer_value;
 uint8_t dimmer_ref_value;
 
-uint16_t key_press_counter;
-
 uint8_t light_on : 1;
 uint16_t blink_counter;
+
+uint16_t key_press_counter;
 
 ISR(INT0_vect) {
 	
@@ -100,7 +100,6 @@ int main(void) {
 	light_on = 1;
 	slide_up = 0;
 	slide_down = 0;
-	slide_pending = 0;
 	key_press_counter = 0;
 	blink_counter = 0;
 	dimmer_value = 5;
