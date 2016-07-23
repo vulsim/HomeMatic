@@ -1,15 +1,10 @@
 /*
-    HomeMatic D1/2 V1.0.0 (hw:v1.0) - Copyright (C) 2016 vulsim. All rights reserved	
+    HomeMatic D1/1 V1.1.0 (hw:v1.0) - Copyright (C) 2016 vulsim. All rights reserved	
 */
 
 #include <avr/interrupt.h>
-
-#include "task.h"
+#include <avr/pgmspace.h>
 #include "hardware.h"
-#include "dimmer.h"
-#include "display.h"
-#include "input.h"
-#include "sensor.h"
 
 #define MAX_INT					0xFFFF
 #define SYNC_LOSS_DURATION		(MAX_INT - 938) // 1.5 of sync cycle (~15ms)
@@ -35,24 +30,18 @@ const uint16_t dim_table[100] PROGMEM ={
 	0xFF33, 0xFF3B, 0xFF43, 0xFF4D, 0xFF57, 0xFF62, 0xFF6F, 0xFF7F, 0xFF93, 0xFFB4
 };
 
-uint8_t wait_sync : 1;
-uint8_t within_dt : 1;
-
-uint8_t on_state : 1;
-uint8_t slide_up : 1;
-uint8_t slide_down : 1;
-uint8_t overheat : 1;
-
+uint8_t wait_sync;
+uint8_t within_dt;
+uint8_t on_state;
+uint8_t slide_up;
+uint8_t slide_down;
+uint8_t overheat;
 uint8_t dimmer_level;
 uint8_t dimmer_ref_level;
-
-uint8_t fast_blink_on : 1;
-uint8_t blink_on : 1;
-
+uint8_t fast_blink_on;
+uint8_t blink_on;
 uint8_t fast_blink_counter;
 uint16_t blink_counter;
-
-
 uint16_t key_press_counter;
 
 /* Interrupts handlers */
@@ -63,8 +52,6 @@ ISR(INT0_vect) {
 
 	wait_sync = 0;
 	within_dt = 0;
-
-	dimmer_state_t dimmer_state = get_dimmer_state();
 
 	if (on_state && !overheat) {
 		if (dimmer_level == MAX_DIM_VALUE) {
@@ -98,10 +85,10 @@ ISR(TIMER1_OVF_vect) {
 ISR(TIMER0_OVF_vect) {
 
 	/* 1 overflow cycle ~= 1 ms */
-	timer0_set_counter(ONE_MS)
+	timer0_set_counter(ONE_MS);
 	
-	if (is_key_pressed() && key_press_duration < MAX_INT) {
-		key_press_duration++;
+	if (is_key_pressed() && key_press_counter < MAX_INT) {
+		key_press_counter++;
 	}
 
 	if (fast_blink_counter < 50) {
@@ -121,14 +108,14 @@ ISR(TIMER0_OVF_vect) {
 
 /* Utils */
 
-void reset_blink() {
+void reset_blink(void) {
 	timer0_stop();
 	blink_on = 1;
 	blink_counter = 0;
 	fast_blink_on = 1;
 	fast_blink_counter = 0;
 	timer0_set_counter(ONE_MS);	
-	timer0_sart();
+	timer0_start();
 }
 
 /* Main */
@@ -164,8 +151,8 @@ int main(void) {
 				if (is_key_pressed()) {
 					if (!overheat) {
 						if (!slide_up && !slide_down && 
-							key_press_duration > MIN_KEY_PRESS_THRESHOLD / 2 && 
-							key_press_duration < MIN_KEY_PRESS_THRESHOLD) {
+							key_press_counter > MIN_KEY_PRESS_THRESHOLD / 2 && 
+							key_press_counter < MIN_KEY_PRESS_THRESHOLD) {
 
 							dimmer_ref_level = dimmer_level;
 
@@ -174,8 +161,8 @@ int main(void) {
 							} else {
 								slide_up = 1;
 							}
-						} else if ((slide_up || slide_down) && key_press_duration > SLIDE_START_THRESHOLD) {
-							uint16_t delta_value = (key_press_duration - SLIDE_START_THRESHOLD) / SLIDE_PERCENT_LENGTH; 
+						} else if ((slide_up || slide_down) && key_press_counter > SLIDE_START_THRESHOLD) {
+							uint16_t delta_value = (key_press_counter - SLIDE_START_THRESHOLD) / SLIDE_PERCENT_LENGTH; 
 
 							if (slide_up) {
 								if (delta_value > MAX_DIM_VALUE - dimmer_ref_level) {
@@ -193,32 +180,31 @@ int main(void) {
 						}
 					}
 				} else {
-					if (key_press_duration > MIN_KEY_PRESS_THRESHOLD && 
-						key_press_duration < SLIDE_START_THRESHOLD) {
+					if (key_press_counter > MIN_KEY_PRESS_THRESHOLD && 
+						key_press_counter < SLIDE_START_THRESHOLD) {
 						on_state = 0;
 						reset_blink();
 					} else if ((slide_up || slide_down) && 
-						key_press_duration > SLIDE_START_THRESHOLD) {						
+						key_press_counter > SLIDE_START_THRESHOLD) {						
 						settings.dim_level = dimmer_level;
 						write_settings();						
 					}
 
 					slide_up = 0;
 					slide_down = 0;					
-					key_press_duration = 0;
+					key_press_counter = 0;
 				}
 			} else if (is_key_pressed()) {
-				if (key_press_duration > MIN_KEY_PRESS_THRESHOLD) {
+				if (key_press_counter > MIN_KEY_PRESS_THRESHOLD) {
 					on_state = 1;
 					slide_up = 0;
 					slide_down = 0;	
-					light_on = 1;
-					blink_counter = 0;
+					reset_blink();
 				}
 			} else {
 				slide_up = 0;
 				slide_down = 0;	
-				key_press_duration = 0;
+				key_press_counter = 0;
 			}
 
 			if (on_state) {

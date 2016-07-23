@@ -2,7 +2,6 @@
 #ifndef HARDWARE_H
 #define HARDWARE_H
 
-#include "FreeRTOSConfig.h"
 #include "settings.h"
 #include "ds18x20.h"
 
@@ -48,7 +47,7 @@ void timer1_disable_isr(void);
 
 void timer1_set_counter(uint16_t value);
 
-uint8_t timer1_get_counter(void);
+uint16_t timer1_get_counter(void);
 
 void timer1_start(void);
 

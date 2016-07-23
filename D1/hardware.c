@@ -4,9 +4,7 @@
 #include <avr/eeprom.h>
 #include <avr/io.h>
 
-settings_t settings;
-
-settings_t ee_settings /*EEMEM*/ = {
+settings_t settings = {
 	
 	.dim_level_min = 5,
 
@@ -14,6 +12,15 @@ settings_t ee_settings /*EEMEM*/ = {
 
 	.dim_level = 5
 };
+
+/*settings_t ee_settings EEMEM = {
+	
+	.dim_level_min = 5,
+
+	.dim_level_max = 100,
+
+	.dim_level = 5
+};*/
 
 /* Sensor */
 
@@ -88,10 +95,6 @@ void timer0_set_counter(uint8_t value) {
 
 uint8_t timer0_get_counter(void) {
 	return TCNT0;
-}
-
-uint8_t is_key_pressed(void) {
-	return !(PIND & (1<<PD6));
 }
 
 void timer0_start(void) {
@@ -191,7 +194,7 @@ void write_settings(void) {
 void int0_setup(void) {
 	EICRA = 1<<ISC01;
 
-	int0_enable_isr();ß
+	int0_enable_isr();
 }
 
 void int0_enable_isr(void) {	

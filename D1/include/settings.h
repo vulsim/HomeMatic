@@ -2,6 +2,8 @@
 #ifndef SETTINGS_H
 #define SETTINGS_H
 
+#include <stdint.h>
+
 typedef struct {
 	
 	uint8_t dim_level_min;
