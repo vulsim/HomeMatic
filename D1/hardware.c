@@ -76,7 +76,6 @@ void timer0_setup(void) {
 	TCCR0A = 0;
 	TCCR0B = 0;
 
-	timer0_stop();
 	timer0_set_counter(0);
 	timer0_enable_isr();
 }
@@ -113,7 +112,6 @@ void timer1_setup(void) {
 	TCCR1B = 0;
 	TCCR1C = 0;
 
-	timer1_stop();
 	timer1_set_counter(0);
 	timer1_enable_isr();
 }

@@ -7,6 +7,7 @@
 #include "hardware.h"
 
 #define MAX_INT					0xFFFF
+#define DIM_OFF_DURATION		63				// ~1 ms
 #define SYNC_LOSS_DURATION		(MAX_INT - 938) // 1.5 of sync cycle (~15ms)
 #define ONE_MS 					(266 - 63)
 #define MIN_DIM_VALUE			5
@@ -15,9 +16,8 @@
 #define SLIDE_START_THRESHOLD 	1000			// 1000 ms
 #define SLIDE_PERCENT_LENGTH	53				// 53 ms for 1% or 5000 ms for full scale (95%)
 
-
 /* INFO: Calculated for clk/256 timer and 10 ms duration (100 Hz) */
-const uint16_t dim_table[100] PROGMEM ={
+const uint16_t dim_table[100] PROGMEM = {
 	0xFD96, 0xFDA1, 0xFDA9, 0xFDB0, 0xFDB7, 0xFDBD, 0xFDC3, 0xFDC8, 0xFDCD, 0xFDD2,
 	0xFDD7, 0xFDDC, 0xFDE1, 0xFDE5, 0xFDEA, 0xFDEE, 0xFDF2, 0xFDF7, 0xFDFB, 0xFDFF,
 	0xFE03, 0xFE07, 0xFE0B, 0xFE0F, 0xFE13, 0xFE17, 0xFE1B, 0xFE1E, 0xFE22, 0xFE26,
@@ -32,6 +32,7 @@ const uint16_t dim_table[100] PROGMEM ={
 
 uint8_t wait_sync;
 uint8_t within_dt;
+uint8_t within_on;
 uint8_t on_state;
 uint8_t slide_up;
 uint8_t slide_down;
@@ -52,19 +53,20 @@ ISR(INT0_vect) {
 
 	wait_sync = 0;
 	within_dt = 0;
+	within_on = 0;
 
 	if (on_state && !overheat) {
 		if (dimmer_level == MAX_DIM_VALUE) {
+			within_on = 1;
 			dim_on();
-			return;
 		} else {
-			within_dt = 1;
+			within_dt = 1;			
 			timer1_set_counter(dim_table[dimmer_level]);
 			timer1_start();
 		}		
+	} else {
+		dim_off();
 	}
-
-	dim_off();
 }
 
 ISR(TIMER1_OVF_vect) {
@@ -73,7 +75,12 @@ ISR(TIMER1_OVF_vect) {
 	
 	if (within_dt) {
 		within_dt = 0;
+		within_on = 1;		
 		dim_on();
+		timer1_set_counter(DIM_OFF_DURATION);
+		timer1_start();
+	} else if (within_on) {
+		within_on = 0;
 		timer1_set_counter(SYNC_LOSS_DURATION);
 		timer1_start();
 	} else {
