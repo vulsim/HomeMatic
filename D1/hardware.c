@@ -75,30 +75,21 @@ int16_t sensor_read_temp(void) {
 void timer0_setup(void) {
 	TCCR0A = 0;
 	TCCR0B = 0;
-
-	timer0_set_counter(0);
+	TCNT0 = 0;
+	OCR0A = 156; // ~10 ms
 	timer0_enable_isr();
 }
 
 void timer0_enable_isr(void) {
-	TIMSK0 |= 1<<TOIE0;
+	TIMSK0 = 1<<OCIE0A;
 }
 
 void timer0_disable_isr() {
-	TIMSK0 &= 0xFF ^ (1<<TOIE0);
+	TIMSK0 = 0;
 }
 
-void timer0_set_counter(uint8_t value) {
-	TCNT0 = value;
-}
-
-uint8_t timer0_get_counter(void) {
-	return TCNT0;
-}
-
-void timer0_start(void) {
-	// INFO: clk/256
-    TCCR0B = 1<<CS02;
+void timer0_start(void) {	
+    TCCR0B = (1<<WGM01) | (1<<CS02) | (1<<CS00); // clk/1024
 }
 
 void timer0_stop(void) {
@@ -111,17 +102,16 @@ void timer1_setup(void) {
 	TCCR1A = 0;
 	TCCR1B = 0;
 	TCCR1C = 0;
-
-	timer1_set_counter(0);
+	TCNT1 = 0;
 	timer1_enable_isr();
 }
 
 void timer1_enable_isr(void) {
-	TIMSK1 |= 1<<TOIE1;
+	TIMSK1 = 1<<TOIE1;
 }
 
 void timer1_disable_isr() {
-	TIMSK1 &= 0xFF ^ (1<<TOIE1);
+	TIMSK1 = 0;
 }
 
 void timer1_set_counter(uint16_t value) {
@@ -133,8 +123,7 @@ uint16_t timer1_get_counter(void) {
 }
 
 void timer1_start(void) {
-	// INFO: clk/256
-    TCCR1B = 1<<CS12;
+    TCCR1B = 1<<CS12; // clk/256
 }
 
 void timer1_stop(void) {

@@ -21,10 +21,6 @@ void timer0_enable_isr(void);
 
 void timer0_disable_isr(void);
 
-void timer0_set_counter(uint8_t value);
-
-uint8_t timer0_get_counter(void);
-
 void timer0_start(void);
 
 void timer0_stop(void);
