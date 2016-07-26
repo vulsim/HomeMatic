@@ -25,6 +25,8 @@ void timer0_start(void);
 
 void timer0_stop(void);
 
+void timer0_set_counter(uint8_t value);
+
 /* Timer1 */
 
 void timer1_setup(void);
@@ -63,7 +65,7 @@ void gled_off(void);
 
 /* EEPROM */
 
-void read_settings(void);
+void read_settings(settings_t *s);
 
 void write_settings(void);
 

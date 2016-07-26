@@ -4,23 +4,16 @@
 #include <avr/eeprom.h>
 #include <avr/io.h>
 
-settings_t settings = {
-	
-	.dim_level_min = 5,
+settings_t settings;
 
-	.dim_level_max = 100,
+settings_t ee_settings EEMEM = {
+	
+	.dim_level_min = 15,
+
+	.dim_level_max = 99,
 
 	.dim_level = 50
 };
-
-/*settings_t ee_settings EEMEM = {
-	
-	.dim_level_min = 5,
-
-	.dim_level_max = 100,
-
-	.dim_level = 5
-};*/
 
 /* Sensor */
 
@@ -76,12 +69,11 @@ void timer0_setup(void) {
 	TCCR0A = 0;
 	TCCR0B = 0;
 	TCNT0 = 0;
-	OCR0A = 156; // ~10 ms
 	timer0_enable_isr();
 }
 
 void timer0_enable_isr(void) {
-	TIMSK0 = 1<<OCIE0A;
+	TIMSK0 = 1<<TOIE0;
 }
 
 void timer0_disable_isr() {
@@ -89,11 +81,15 @@ void timer0_disable_isr() {
 }
 
 void timer0_start(void) {	
-    TCCR0B = (1<<WGM01) | (1<<CS02) | (1<<CS00); // clk/1024
+    TCCR0B = (1<<CS02) | (1<<CS00); // clk/1024
 }
 
 void timer0_stop(void) {
 	TCCR0B = 0;
+}
+
+void timer0_set_counter(uint8_t value) {
+    TCNT0 = value;
 }
 
 /* Timer1 */
@@ -166,20 +162,18 @@ void gled_off(void) {
 
 /* EEPROM */
 
-void read_settings(void) {
-	
-	//eeprom_read_block(&settings, &ee_settings, sizeof(settings_t));
+void read_settings(settings_t *s) {
+	eeprom_read_block((s) ? s : &settings, &ee_settings, sizeof(settings_t));
 }
 
 void write_settings(void) {
-	
-	//eeprom_write_block(&settings, &ee_settings, sizeof(settings_t));
+	eeprom_write_block(&settings, &ee_settings, sizeof(settings_t));
 }
 
 /* INT0 */
 
 void int0_setup(void) {
-	EICRA = 1<<ISC01;
+	EICRA = (1<<ISC01) | (1<<ISC00);
 
 	int0_enable_isr();
 }

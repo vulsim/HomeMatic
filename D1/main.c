@@ -9,9 +9,9 @@
 #define MAX_INT					0xFFFF
 #define SYNC_LOSS_DURATION		(MAX_INT - 938) // 1.5 of sync cycle (~15ms)
 #define LONG_BLINK_DURATION		100				// 1 sec
-#define MIN_KEY_PRESS_THRESHOLD	10				// 100 ms
-#define SLIDE_START_THRESHOLD 	100				// 1 ses
-#define SLIDE_VELOCITY			5				// 100% -> 5 sec
+#define MIN_KEY_PRESS_THRESHOLD	5				// 50 ms
+#define SLIDE_START_THRESHOLD 	50				// 0,5 ses
+#define STEP_THRESHOLD			5				// 100% -> 5 sec
 
 /* INFO: Calculated for clk/256 timer and 10 ms duration (100 Hz) */
 
@@ -30,18 +30,19 @@ const uint16_t dim_table[100] = {
 
 typedef enum {
 	STATE_OFF = 0,
-	STATE_ON = 1,
-	STATE_UP = 2,
-	STATE_DOWN = 3
+	STATE_SEMI_ON = 1,
+	STATE_ON = 2,
+	STATE_UP = 3,
+	STATE_DOWN = 4
 } state_t;
 
 uint8_t blink_on;
-uint8_t dim_ref_level;
+uint8_t step_counter;
 uint16_t blink_counter;
 uint16_t key_press_counter;
 
 uint8_t sync_wait;
-uint8_t sync_within_dt;
+uint8_t sync_state;
 state_t state;
 
 /* Interrupts handlers */
@@ -51,10 +52,9 @@ ISR(INT0_vect) {
 	timer1_stop();
 
 	sync_wait = 0;
-	sync_within_dt = 0;
+	sync_state = 0;
 
-	if (state == STATE_ON) {
-		sync_within_dt = 1;			
+	if (state >= STATE_SEMI_ON) {		
 		timer1_set_counter(dim_table[settings.dim_level]);
 		timer1_start();		
 	}
@@ -62,21 +62,33 @@ ISR(INT0_vect) {
 
 ISR(TIMER1_OVF_vect) {	
 	timer1_stop();
-
-	if (sync_within_dt) {
-		sync_within_dt = 0;	
-		dim_on();
-		timer1_set_counter(SYNC_LOSS_DURATION);
-		timer1_start();
-	} else {
-		sync_wait = 1;
-		dim_off();
+	
+	switch (sync_state) {
+		case 0:
+			sync_state = 1;
+			dim_on();
+			timer1_set_counter(0xFF - 47);
+			timer1_start();
+			break;
+		
+		case 1:
+			sync_state = 2;
+			dim_off();
+			timer1_set_counter(SYNC_LOSS_DURATION);
+			timer1_start();
+			break;
+			
+		case 2:
+			sync_wait = 1;
+			break;
 	}
 }
 
 /* 1 cycle ~= 10 ms */
 
-ISR(TIMER0_COMPA_vect) {
+ISR(TIMER0_OVF_vect) {
+
+	timer0_set_counter(255 - 156);
 		
 	if (is_key_pressed() && key_press_counter < MAX_INT) {
 		key_press_counter++;
@@ -88,6 +100,10 @@ ISR(TIMER0_COMPA_vect) {
 		blink_counter = 0;
 		blink_on = (blink_on) ? 0 : 1;
 	}
+	
+	if ((state == STATE_UP || state == STATE_DOWN) && step_counter <STEP_THRESHOLD) {
+		step_counter++;	
+	}
 }
 
 /* FSM */
@@ -96,6 +112,13 @@ void process_state(uint8_t key_pressed, uint16_t key_press_counter) {
 	switch (state) {
 		case STATE_OFF: {
 			if (key_pressed && key_press_counter > MIN_KEY_PRESS_THRESHOLD) {
+				state = STATE_SEMI_ON;
+			}
+			break;
+		}
+		
+		case STATE_SEMI_ON: {
+			if (!key_pressed) {
 				state = STATE_ON;
 			}
 			break;
@@ -104,7 +127,7 @@ void process_state(uint8_t key_pressed, uint16_t key_press_counter) {
 		case STATE_ON: {
 			if (key_pressed) {
 				if (key_press_counter > SLIDE_START_THRESHOLD) {
-					dim_ref_level = settings.dim_level;
+					step_counter = 0;
 
 					if (settings.dim_level > (settings.dim_level_min + settings.dim_level_max) / 2) {
 						state =  STATE_DOWN;
@@ -114,40 +137,37 @@ void process_state(uint8_t key_pressed, uint16_t key_press_counter) {
 				}
 			} else if (key_press_counter > MIN_KEY_PRESS_THRESHOLD && key_press_counter < SLIDE_START_THRESHOLD) {
 				state = STATE_OFF;
+				
+				settings_t ee_settings;
+				read_settings(&ee_settings); 
+				
+				if (settings.dim_level != ee_settings.dim_level) {
+					write_settings();
+				}
 			}
 			break;
 		}
 
 		case STATE_UP: {
 			if (key_pressed) {
-				if (settings.dim_level < settings.dim_level_max) {
-					uint16_t delta = (key_press_counter - SLIDE_START_THRESHOLD) / SLIDE_VELOCITY;
-
-					if (delta < settings.dim_level_max - dim_ref_level) {
-						settings.dim_level = dim_ref_level + delta;
-					} else {
-						settings.dim_level = settings.dim_level_max;
-					}
+				if (step_counter == STEP_THRESHOLD && settings.dim_level < settings.dim_level_max) {
+					settings.dim_level += 1;
+					step_counter = 0;
 				} 
-			} else if (key_press_counter > SLIDE_START_THRESHOLD) {
-				write_settings();
+			} else {
+				state = STATE_ON;
 			}
 			break;
 		}
 
 		case STATE_DOWN: {
 			if (key_pressed) {
-				if (settings.dim_level > settings.dim_level_min) {
-					uint16_t delta = (key_press_counter - SLIDE_START_THRESHOLD) / SLIDE_VELOCITY;
-
-					if (delta < dim_ref_level - settings.dim_level_min) {
-						settings.dim_level = dim_ref_level - delta;
-					} else {
-						settings.dim_level = settings.dim_level_min;
-					}
+				if (step_counter == STEP_THRESHOLD && settings.dim_level > settings.dim_level_min) {
+					settings.dim_level -= 1;
+					step_counter = 0;
 				}
-			} else if (key_press_counter > SLIDE_START_THRESHOLD) {
-				write_settings();
+			} else {
+				state = STATE_ON;
 			}
 			break;
 		}		
@@ -176,8 +196,8 @@ void display_state(void) {
 		}
 
 		case STATE_ON: {
-			rled_on();
-			gled_off();
+			rled_off();
+			gled_on();
 			break;
 		}
 
@@ -197,17 +217,17 @@ int main(void) {
 	cli();
 
 	if (hardware_setup()) {
-		read_settings();
+		read_settings(NULL);
 		
-		blink_on = 1;
-		dim_ref_level = 0;
+		blink_on = 0;
 		blink_counter = 0;
 		key_press_counter = 0;
 		sync_wait = 1;
-		sync_within_dt = 0;
+		sync_state = 0;
 		state = STATE_OFF;
 
 		sei();
+		timer0_set_counter(255 - 156);
 		timer0_start();
 		
 		for (;;) {
