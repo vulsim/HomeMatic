@@ -92,17 +92,17 @@ ISR(TIMER0_COMPA_vect) {
 
 /* FSM */
 
-void process_state(uint8_t is_key_pressed, uint16_t key_press_counter) {
+void process_state(uint8_t key_pressed, uint16_t key_press_counter) {
 	switch (state) {
 		case STATE_OFF: {
-			if (is_key_pressed && key_press_counter > MIN_KEY_PRESS_THRESHOLD) {
+			if (key_pressed && key_press_counter > MIN_KEY_PRESS_THRESHOLD) {
 				state = STATE_ON;
 			}
 			break;
 		}
 
 		case STATE_ON: {
-			if (is_key_pressed) {
+			if (key_pressed) {
 				if (key_press_counter > SLIDE_START_THRESHOLD) {
 					dim_ref_level = settings.dim_level;
 
@@ -119,27 +119,35 @@ void process_state(uint8_t is_key_pressed, uint16_t key_press_counter) {
 		}
 
 		case STATE_UP: {
-			if (settings.dim_level < settings.dim_level_max) {
-				uint16_t delta = (key_press_counter - SLIDE_START_THRESHOLD) / SLIDE_VELOCITY;
+			if (key_pressed) {
+				if (settings.dim_level < settings.dim_level_max) {
+					uint16_t delta = (key_press_counter - SLIDE_START_THRESHOLD) / SLIDE_VELOCITY;
 
-				if (delta < settings.dim_level_max - dim_ref_level) {
-					settings.dim_level = dimmer_ref_level + delta;
-				} else {
-					settings.dim_level = settings.dim_level_max;
-				}
+					if (delta < settings.dim_level_max - dim_ref_level) {
+						settings.dim_level = dim_ref_level + delta;
+					} else {
+						settings.dim_level = settings.dim_level_max;
+					}
+				} 
+			} else if (key_press_counter > SLIDE_START_THRESHOLD) {
+				write_settings();
 			}
 			break;
 		}
 
 		case STATE_DOWN: {
-			if (settings.dim_level > settings.dim_level_min) {
-				uint16_t delta = (key_press_counter - SLIDE_START_THRESHOLD) / SLIDE_VELOCITY;
+			if (key_pressed) {
+				if (settings.dim_level > settings.dim_level_min) {
+					uint16_t delta = (key_press_counter - SLIDE_START_THRESHOLD) / SLIDE_VELOCITY;
 
-				if (delta < dim_ref_level - settings.dim_level_min) {
-					settings.dim_level = dimmer_ref_level - delta;
-				} else {
-					settings.dim_level = settings.dim_level_min;
+					if (delta < dim_ref_level - settings.dim_level_min) {
+						settings.dim_level = dim_ref_level - delta;
+					} else {
+						settings.dim_level = settings.dim_level_min;
+					}
 				}
+			} else if (key_press_counter > SLIDE_START_THRESHOLD) {
+				write_settings();
 			}
 			break;
 		}		
@@ -173,7 +181,7 @@ void display_state(void) {
 			break;
 		}
 
-		case STATE_UP: {			
+		case STATE_UP:			
 		case STATE_DOWN: {
 			rled_on();
 			gled_on();
@@ -203,12 +211,12 @@ int main(void) {
 		timer0_start();
 		
 		for (;;) {
-			uint8_t is_key_pressed = is_key_pressed();
+			uint8_t key_pressed = is_key_pressed();
 
-			process_state(is_key_pressed, key_press_counter);
+			process_state(key_pressed, key_press_counter);
 			display_state();
 
-			if (!is_key_pressed) {
+			if (!key_pressed) {
 				timer0_disable_isr();
 				key_press_counter = 0;
 				timer0_enable_isr();
