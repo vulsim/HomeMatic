@@ -5,10 +5,11 @@
 #include <avr/interrupt.h>
 #include <avr/pgmspace.h>
 #include "hardware.h"
-
+		
 #define MAX_INT					0xFFFF
-#define SYNC_LOSS_DURATION		(MAX_INT - 938) // 1.5 of sync cycle (~15ms)
-#define LONG_BLINK_DURATION		50				// 0.5 sec
+#define SYNC_LOSS_DURATION		(0xFFFF - 938)	// 1.5 of sync cycle (~15ms)
+#define MS_10					(0xFF - 156)	// 10 ms	
+#define BLINK_DURATION			50				// 0.5 sec
 #define MIN_KEY_PRESS_THRESHOLD	5				// 50 ms
 #define SLIDE_START_THRESHOLD 	50				// 0.5 sec
 #define STEP_THRESHOLD			5				// 100% -> 5 sec
@@ -30,7 +31,7 @@ const uint16_t dim_table[100] = {
 
 typedef enum {
 	STATE_OFF = 0,
-	STATE_SEMI_ON = 1,
+	STATE_HALF_ON = 1,
 	STATE_ON = 2,
 	STATE_UP = 3,
 	STATE_DOWN = 4
@@ -54,7 +55,7 @@ ISR(INT0_vect) {
 	sync_wait = 0;
 	sync_state = 0;
 
-	if (state >= STATE_SEMI_ON) {		
+	if (state >= STATE_HALF_ON) {		
 		timer1_set_counter(dim_table[settings.dim_level]);
 		timer1_start();		
 	}
@@ -79,6 +80,7 @@ ISR(TIMER1_OVF_vect) {
 			break;
 			
 		case 2:
+			dim_off();
 			sync_wait = 1;
 			break;
 	}
@@ -88,20 +90,20 @@ ISR(TIMER1_OVF_vect) {
 
 ISR(TIMER0_OVF_vect) {
 
-	timer0_set_counter(255 - 156);
+	timer0_set_counter(MS_10);
 		
 	if (is_key_pressed() && key_press_counter < MAX_INT) {
 		key_press_counter++;
 	}
 
-	if (blink_counter < LONG_BLINK_DURATION) {
+	if (blink_counter < BLINK_DURATION) {
 		blink_counter++;
 	} else {
 		blink_counter = 0;
 		blink_on = (blink_on) ? 0 : 1;
 	}
 	
-	if ((state == STATE_UP || state == STATE_DOWN) && step_counter <STEP_THRESHOLD) {
+	if ((state == STATE_UP || state == STATE_DOWN) && step_counter < STEP_THRESHOLD) {
 		step_counter++;	
 	}
 }
@@ -112,12 +114,15 @@ void process_state(uint8_t key_pressed, uint16_t key_press_counter) {
 	switch (state) {
 		case STATE_OFF: {
 			if (key_pressed && key_press_counter > MIN_KEY_PRESS_THRESHOLD) {
-				state = STATE_SEMI_ON;
+				blink_counter = 0;
+				blink_on = 0;
+				sync_wait = 1;
+				state = STATE_HALF_ON;
 			}
 			break;
 		}
 		
-		case STATE_SEMI_ON: {
+		case STATE_HALF_ON: {
 			if (!key_pressed) {
 				state = STATE_ON;
 			}
@@ -176,7 +181,7 @@ void process_state(uint8_t key_pressed, uint16_t key_press_counter) {
 
 /* Display state */
 
-void display_state(void) {
+void process_display(void) {
 	if (sync_wait) {
 		if (blink_on) {
 			rled_on();
@@ -195,7 +200,7 @@ void display_state(void) {
 			break;
 		}
 
-		case STATE_SEMI_ON:
+		case STATE_HALF_ON:
 		case STATE_ON: {
 			rled_off();
 			gled_on();
@@ -222,20 +227,22 @@ int main(void) {
 		
 		blink_on = 0;
 		blink_counter = 0;
+		step_counter = 0;
 		key_press_counter = 0;
-		sync_wait = 1;
+
 		sync_state = 0;
+		sync_wait = 1;
 		state = STATE_OFF;
 
 		sei();
-		timer0_set_counter(255 - 156);
+		timer0_set_counter(MS_10);
 		timer0_start();
 		
 		for (;;) {
 			uint8_t key_pressed = is_key_pressed();
 
 			process_state(key_pressed, key_press_counter);
-			display_state();
+			process_display();
 
 			if (!key_pressed) {
 				timer0_disable_isr();
