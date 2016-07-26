@@ -195,6 +195,7 @@ void display_state(void) {
 			break;
 		}
 
+		case STATE_SEMI_ON:
 		case STATE_ON: {
 			rled_off();
 			gled_on();
