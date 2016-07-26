@@ -8,9 +8,9 @@
 
 #define MAX_INT					0xFFFF
 #define SYNC_LOSS_DURATION		(MAX_INT - 938) // 1.5 of sync cycle (~15ms)
-#define LONG_BLINK_DURATION		100				// 1 sec
+#define LONG_BLINK_DURATION		50				// 0.5 sec
 #define MIN_KEY_PRESS_THRESHOLD	5				// 50 ms
-#define SLIDE_START_THRESHOLD 	50				// 0,5 ses
+#define SLIDE_START_THRESHOLD 	50				// 0.5 sec
 #define STEP_THRESHOLD			5				// 100% -> 5 sec
 
 /* INFO: Calculated for clk/256 timer and 10 ms duration (100 Hz) */
