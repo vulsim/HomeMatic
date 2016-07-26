@@ -7,17 +7,18 @@
 #include "hardware.h"
 
 #define MAX_INT					0xFFFF
-#define DIM_OFF_DURATION		63				// ~1 ms
 #define SYNC_LOSS_DURATION		(MAX_INT - 938) // 1.5 of sync cycle (~15ms)
-#define ONE_MS 					(266 - 63)
+#define ONE_MS 					(255 - 63)
 #define MIN_DIM_VALUE			5
 #define MAX_DIM_VALUE			100
+#define SHORT_BLINK_DURATION	100
+#define LONG_BLINK_DURATION		1000
 #define MIN_KEY_PRESS_THRESHOLD	100				// 100 ms
 #define SLIDE_START_THRESHOLD 	1000			// 1000 ms
 #define SLIDE_PERCENT_LENGTH	53				// 53 ms for 1% or 5000 ms for full scale (95%)
 
 /* INFO: Calculated for clk/256 timer and 10 ms duration (100 Hz) */
-const uint16_t dim_table[100] PROGMEM = {
+const uint16_t dim_table[100] = {
 	0xFD96, 0xFDA1, 0xFDA9, 0xFDB0, 0xFDB7, 0xFDBD, 0xFDC3, 0xFDC8, 0xFDCD, 0xFDD2,
 	0xFDD7, 0xFDDC, 0xFDE1, 0xFDE5, 0xFDEA, 0xFDEE, 0xFDF2, 0xFDF7, 0xFDFB, 0xFDFF,
 	0xFE03, 0xFE07, 0xFE0B, 0xFE0F, 0xFE13, 0xFE17, 0xFE1B, 0xFE1E, 0xFE22, 0xFE26,
@@ -39,48 +40,36 @@ uint8_t slide_down;
 uint8_t overheat;
 uint8_t dimmer_level;
 uint8_t dimmer_ref_level;
-uint8_t fast_blink_on;
-uint8_t blink_on;
-uint8_t fast_blink_counter;
-uint16_t blink_counter;
+uint8_t short_blink_on;
+uint8_t long_blink_on;
+uint8_t short_blink_counter;
+uint16_t long_blink_counter;
 uint16_t key_press_counter;
 
 /* Interrupts handlers */
 
 ISR(INT0_vect) {
 	
+	dim_off();
 	timer1_stop();
 
 	wait_sync = 0;
 	within_dt = 0;
-	within_on = 0;
 
-	if (on_state && !overheat) {
-		if (dimmer_level == MAX_DIM_VALUE) {
-			within_on = 1;
-			dim_on();
-		} else {
-			within_dt = 1;			
-			timer1_set_counter(dim_table[dimmer_level]);
-			timer1_start();
-		}		
-	} else {
-		dim_off();
+	if (on_state) {
+		within_dt = 1;			
+		timer1_set_counter(dim_table[dimmer_level]);
+		timer1_start();		
 	}
 }
 
 ISR(TIMER1_OVF_vect) {
 	
 	timer1_stop();
-	
+
 	if (within_dt) {
-		within_dt = 0;
-		within_on = 1;		
+		within_dt = 0;	
 		dim_on();
-		timer1_set_counter(DIM_OFF_DURATION);
-		timer1_start();
-	} else if (within_on) {
-		within_on = 0;
 		timer1_set_counter(SYNC_LOSS_DURATION);
 		timer1_start();
 	} else {
@@ -98,31 +87,19 @@ ISR(TIMER0_OVF_vect) {
 		key_press_counter++;
 	}
 
-	if (fast_blink_counter < 50) {
-		fast_blink_counter++;
+	if (short_blink_counter < SHORT_BLINK_DURATION) {
+		short_blink_counter++;
 	} else {
-		fast_blink_counter = 0;
-		fast_blink_on = (fast_blink_on) ? 0 : 1;
+		short_blink_counter = 0;
+		short_blink_on = (short_blink_on) ? 0 : 1;
 	}
 
-	if (blink_counter < 1000) {
-		blink_counter++;
+	if (long_blink_counter < LONG_BLINK_DURATION) {
+		long_blink_counter++;
 	} else {
-		blink_counter = 0;
-		blink_on = (blink_on) ? 0 : 1;
+		long_blink_counter = 0;
+		long_blink_on = (long_blink_on) ? 0 : 1;
 	}
-}
-
-/* Utils */
-
-void reset_blink(void) {
-	timer0_stop();
-	blink_on = 1;
-	blink_counter = 0;
-	fast_blink_on = 1;
-	fast_blink_counter = 0;
-	timer0_set_counter(ONE_MS);	
-	timer0_start();
 }
 
 /* Main */
@@ -136,28 +113,27 @@ int main(void) {
 		
 		wait_sync = 1;
 		within_dt = 0;
-		
 		on_state = 0;	
 		overheat = 0;
 		slide_up = 0;
 		slide_down = 0;
-		dimmer_level = settings.dim_level;	
-
-		blink_on = 1;	
-		blink_counter = 0;
-		fast_blink_on = 1;
-		fast_blink_counter = 0;
-		
+		long_blink_on = 1;	
+		short_blink_on = 1;
+		long_blink_counter = 0;
+		short_blink_counter = 0;
 		key_press_counter = 0;
 
+		dimmer_level = settings.dim_level;
+
 		sei();
+		timer0_set_counter(ONE_MS);
 		timer0_start();
 		
 		for (;;) {
 			if (on_state) {
 				if (is_key_pressed()) {
-					if (!overheat) {
-						if (!slide_up && !slide_down && 
+					/*if (!overheat) {
+						/*if (!slide_up && !slide_down && 
 							key_press_counter > MIN_KEY_PRESS_THRESHOLD / 2 && 
 							key_press_counter < MIN_KEY_PRESS_THRESHOLD) {
 
@@ -185,17 +161,16 @@ int main(void) {
 								}
 							}
 						}
-					}
+					}*/
 				} else {
 					if (key_press_counter > MIN_KEY_PRESS_THRESHOLD && 
 						key_press_counter < SLIDE_START_THRESHOLD) {
-						on_state = 0;
-						reset_blink();
-					} else if ((slide_up || slide_down) && 
+						on_state = 0;;
+					}/* else if ((slide_up || slide_down) && 
 						key_press_counter > SLIDE_START_THRESHOLD) {						
 						settings.dim_level = dimmer_level;
 						write_settings();						
-					}
+					}*/
 
 					slide_up = 0;
 					slide_down = 0;					
@@ -206,7 +181,6 @@ int main(void) {
 					on_state = 1;
 					slide_up = 0;
 					slide_down = 0;	
-					reset_blink();
 				}
 			} else {
 				slide_up = 0;
@@ -216,7 +190,7 @@ int main(void) {
 
 			if (on_state) {
 				if (overheat) {
-					if (blink_on) {
+					if (long_blink_on) {
 						rled_on();
 						gled_off();
 					} else {
@@ -224,22 +198,25 @@ int main(void) {
 						gled_off();
 					}
 				} else if (wait_sync) {
-					if (blink_on) {
+					if (long_blink_on) {
 						rled_on();
 						gled_on();
 					} else {
-						rled_on();
-						gled_on();
+						rled_off();
+						gled_off();
 					}
 				} else {					
 					gled_on();
 
-					if ((slide_up || slide_down) && fast_blink_on) {
+					if ((slide_up || slide_down) && short_blink_on) {
 						rled_on();
 					} else {
 						rled_off();
 					}
 				}
+			} else {
+				rled_off();
+				gled_off();
 			}
 		}
 	}

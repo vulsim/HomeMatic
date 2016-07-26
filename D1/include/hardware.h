@@ -5,14 +5,6 @@
 #include "settings.h"
 #include "ds18x20.h"
 
-#define MAX_TICKS_COUNT				0xFFFF
-#define TICK_SIZE_US				(1000000 / configTICK_RATE_HZ)
-
-#define FAULT_TEMP_MIN				40
-#define FAULT_TEMP_MAX				60
-
-#define SENSOR_MEASURE_TICKS		(DS18B20_TCONV_12BIT * 10 / TICK_SIZE_US) * 100
-
 extern settings_t settings;
 
 /* Sensor */

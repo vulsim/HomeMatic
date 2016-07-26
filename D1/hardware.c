@@ -10,7 +10,7 @@ settings_t settings = {
 
 	.dim_level_max = 100,
 
-	.dim_level = 5
+	.dim_level = 50
 };
 
 /*settings_t ee_settings EEMEM = {
