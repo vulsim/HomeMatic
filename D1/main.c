@@ -4,6 +4,7 @@
 
 #include <avr/interrupt.h>
 #include <avr/pgmspace.h>
+#include <util/delay.h>
 #include "hardware.h"
 
 #define MAX_INT					0xFFFF
@@ -143,6 +144,9 @@ void process_state(uint8_t key_pressed, uint16_t key_press_counter) {
 				
 				if (settings.dim_level != ee_settings.dim_level) {
 					write_settings();
+					rled_on();
+					gled_off();
+					_delay_ms(500);              
 				}
 			}
 			break;

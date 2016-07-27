@@ -9,6 +9,8 @@ extern settings_t settings;
 
 /* Sensor */
 
+int8_t search_sensors(void);
+
 uint8_t sensor_measure_temp(void);
 
 int16_t sensor_read_temp(void);
