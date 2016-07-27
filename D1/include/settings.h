@@ -12,6 +12,10 @@ typedef struct {
 
 	uint8_t dim_level;
 
+	uint8_t overheat_threshold_temp;
+
+	uint8_t overheat_release_temp;
+
 } settings_t;
 
 #endif /* SETTINGS_H */

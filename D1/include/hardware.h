@@ -5,11 +5,11 @@
 #include "settings.h"
 #include "ds18x20.h"
 
+#define WRONG_TEMP	(-273)
+
 extern settings_t settings;
 
 /* Sensor */
-
-int8_t search_sensors(void);
 
 uint8_t sensor_measure_temp(void);
 

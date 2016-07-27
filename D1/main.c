@@ -17,6 +17,9 @@
 #define STEP_THRESHOLD			5				// 100% -> 5 sec
 #define DIM_LEVEL_MIN			10
 #define DIM_LEVEL_MAX			99
+#define OVERHEAT_MAX_TEMP		70
+#define TEMP_MEASURE_END		75				// 750 ms
+#define TEMP_MEASURE_INTERVAL	3000			// 30 sec
 
 /* INFO: Calculated for clk/256 timer and 10 ms duration (100 Hz) */
 
@@ -50,10 +53,12 @@ typedef enum {
 	OFF = 3	
 } sync_t;
 
+int16_t temp;
 uint8_t blink_on;
 uint8_t step_counter;
 uint16_t blink_counter;
 uint16_t key_press_counter;
+uint16_t temp_measure_counter;
 
 state_t state;
 sync_t sync_state;
@@ -118,6 +123,19 @@ ISR(TIMER0_OVF_vect) {
 	if ((state == STATE_SWEEP_UP || state == STATE_SWEEP_DOWN) && step_counter < STEP_THRESHOLD) {
 		step_counter++;	
 	}
+
+	if (temp_measure_counter < TEMP_MEASURE_INTERVAL) {
+		temp_measure_counter++;
+
+		if (temp_measure_counter == TEMP_MEASURE_END) {
+			temp = sensor_read_temp() / 10;
+		}
+	} else if (sensor_measure_temp()) {
+		temp_measure_counter = 0;
+	} else {
+		temp_measure_counter = TEMP_MEASURE_END;
+		temp = WRONG_TEMP;
+	}
 }
 
 /* FSM */
@@ -135,26 +153,34 @@ void process_state(uint8_t key_pressed, uint16_t key_press_counter) {
 		}
 
 		case STATE_OVERHEAT_OFF: {
-			
+			if (!key_pressed && temp < settings.overheat_release_temp && temp != WRONG_TEMP) {
+				state = STATE_OFF;
+			}
 			break;
 		}
 
 		case STATE_OVERHEAT_ON: {
 			if (!key_pressed && key_press_counter > MIN_KEY_PRESS_THRESHOLD) {
 				state = STATE_OVERHEAT_OFF;				
+			} else if (!key_pressed && temp < settings.overheat_release_temp && temp != WRONG_TEMP) {
+				state = STATE_ON;
 			}
 			break;
 		}
 		
 		case STATE_HALF_ON: {
-			if (!key_pressed) {
+			if (temp > settings.overheat_threshold_temp  || temp == WRONG_TEMP) {
+				state = STATE_OVERHEAT_OFF;
+			} else if (!key_pressed) {
 				state = STATE_ON;
 			}
 			break;
 		}
 
 		case STATE_ON: {
-			if (key_pressed) {
+			if (temp > settings.overheat_threshold_temp || temp == WRONG_TEMP) {
+				state = STATE_OVERHEAT_ON;
+			} else if (key_pressed) {
 				if (key_press_counter > SWEEP_START_THRESHOLD) {
 					step_counter = 0;
 
@@ -181,7 +207,9 @@ void process_state(uint8_t key_pressed, uint16_t key_press_counter) {
 		}
 
 		case STATE_SWEEP_UP: {
-			if (key_pressed) {
+			if (temp > settings.overheat_threshold_temp || temp == WRONG_TEMP) {
+				state = STATE_OVERHEAT_ON;
+			} else if (key_pressed) {
 				if (step_counter == STEP_THRESHOLD && settings.dim_level < settings.dim_level_max) {
 					settings.dim_level += 1;
 					step_counter = 0;
@@ -193,7 +221,9 @@ void process_state(uint8_t key_pressed, uint16_t key_press_counter) {
 		}
 
 		case STATE_SWEEP_DOWN: {
-			if (key_pressed) {
+			if (temp > settings.overheat_threshold_temp || temp == WRONG_TEMP) {
+				state = STATE_OVERHEAT_ON;
+			} else if (key_pressed) {
 				if (step_counter == STEP_THRESHOLD && settings.dim_level > settings.dim_level_min) {
 					settings.dim_level -= 1;
 					step_counter = 0;
@@ -268,8 +298,16 @@ void validate_settings(void) {
 
 	if (settings.dim_level_min < DIM_LEVEL_MIN) {
 		settings.dim_level_min = DIM_LEVEL_MIN;
-	} else if (settings.dim_level_min > settings.dim_level_max) {
+	} else if (settings.dim_level_min >= settings.dim_level_max) {
 		settings.dim_level_min = settings.dim_level_max - 1;
+	}
+
+	if (settings.overheat_threshold_temp > OVERHEAT_MAX_TEMP) {
+		settings.overheat_threshold_temp = OVERHEAT_MAX_TEMP;
+	}
+
+	if (settings.overheat_release_temp > settings.overheat_threshold_temp) {
+		settings.overheat_release_temp = settings.overheat_threshold_temp;
 	}
 }
 
@@ -287,9 +325,17 @@ int main(void) {
 		blink_counter = 0;
 		step_counter = 0;
 		key_press_counter = 0;
+		temp_measure_counter = 1;
 
 		sync_state = IDLE;		
 		state = WAIT_SYNC;
+
+		if (sensor_measure_temp()) {
+			_delay_ms(750);
+			temp = sensor_read_temp() / 10;			
+		} else {
+			temp = WRONG_TEMP;
+		}
 
 		sei();
 		timer0_set_counter(MS_10);

@@ -5,6 +5,7 @@
 #include <avr/io.h>
 
 settings_t settings;
+uint8_t sensor_id[OW_ROMCODE_SIZE];
 
 settings_t ee_settings EEMEM = {
 	
@@ -12,14 +13,17 @@ settings_t ee_settings EEMEM = {
 
 	.dim_level_max = 90,
 
-	.dim_level = 25
+	.dim_level = 25,
+
+	.overheat_threshold_temp = 70,
+
+	.overheat_release_temp = 55
 };
 
 /* Sensor */
 
 uint8_t search_sensors(void) {
 
-	uint8_t id[OW_ROMCODE_SIZE];
 	uint8_t diff, sensors;
 	
 	sensors = 0;
@@ -29,7 +33,7 @@ uint8_t search_sensors(void) {
 	ow_reset();
 
 	while (diff != OW_LAST_DEVICE && sensors < 5) {
-		DS18X20_find_sensor(&diff, &id[0]);
+		DS18X20_find_sensor(&diff, &sensor_id[0]);
 		
 		if (diff == OW_PRESENCE_ERR) {
 			break;
@@ -46,7 +50,6 @@ uint8_t search_sensors(void) {
 }
 
 uint8_t sensor_measure_temp(void) {
-
 	if (DS18X20_start_meas(DS18X20_POWER_EXTERN, NULL) == DS18X20_OK) {
 		return 1;
 	}
@@ -55,10 +58,9 @@ uint8_t sensor_measure_temp(void) {
 }
 
 int16_t sensor_read_temp(void) {
-
-	int16_t temp = 30000;
+	int16_t temp = WRONG_TEMP;
 	
-	DS18X20_read_decicelsius_single(0, &temp);
+	DS18X20_read_decicelsius(sensor_id, &temp);
 
 	return temp;
 }
@@ -209,11 +211,11 @@ uint8_t hardware_setup(void) {
 
 	timer1_setup();
 	
-	/*ow_set_bus(&PINC, &PORTC, DDRC, PC1);
+	ow_set_bus(&PINC, &PORTC, &DDRC, PC1);
 
 	if (search_sensors() != 1) {
 		return 0;
-	}*/
+	}
 
 	return 1;
 }
