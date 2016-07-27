@@ -10,9 +10,9 @@ settings_t ee_settings EEMEM = {
 	
 	.dim_level_min = 15,
 
-	.dim_level_max = 99,
+	.dim_level_max = 90,
 
-	.dim_level = 50
+	.dim_level = 25
 };
 
 /* Sensor */
