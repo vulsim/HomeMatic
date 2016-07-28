@@ -311,7 +311,7 @@ void validate_settings(void) {
 	if (settings.overheat_threshold_temp > OVERHEAT_MAX_TEMP) {
 		settings.overheat_threshold_temp = OVERHEAT_MAX_TEMP;
 	} else if (settings.overheat_threshold_temp < OVERHEAT_MIN_TEMP) {
-		settings.overheat_threshold_temp = settings.OVERHEAT_MAX_TEMP;
+		settings.overheat_threshold_temp = OVERHEAT_MIN_TEMP;
 	}
 
 	if (settings.overheat_release_temp > settings.overheat_threshold_temp) {
