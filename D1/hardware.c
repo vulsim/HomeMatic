@@ -64,10 +64,15 @@ uint8_t sensor_measure_temp(void) {
 }
 
 int16_t sensor_read_temp(void) {
-	int16_t temp = SENSOR_TEMP_WRONG * 10;	
+	int16_t temp;	
+	
 	DS18X20_read_decicelsius(sensor_id, &temp);
 
-	return temp / 10;
+	if (temp != DS18X20_INVALID_DECICELSIUS) {
+		return temp / 10;
+	}
+
+	return SENSOR_TEMP_WRONG;	
 }
 
 /* Timer0 */
