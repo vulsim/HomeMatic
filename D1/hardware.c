@@ -15,7 +15,7 @@ settings_t ee_settings EEMEM = {
 
 	.dim_level = 25,
 
-	.overheat_threshold_temp = 70,
+	.overheat_threshold_temp = 60,
 
 	.overheat_release_temp = 55
 };
@@ -223,7 +223,7 @@ uint8_t hardware_setup(void) {
 	
 	ow_set_bus(&PINC, &PORTC, &DDRC, PC1);
 
-	if (sensor_read_temp() != SENSOR_OK) {
+	if (sensor_setup() != SENSOR_OK) {
 		return 0;
 	}
 

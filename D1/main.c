@@ -130,7 +130,7 @@ ISR(TIMER0_OVF_vect) {
 		if (temp_measure_counter == TEMP_MEASURE_END) {
 			temp = sensor_read_temp();
 		}
-	} else if (sensor_measure_temp()) {
+	} else if (sensor_measure_temp() == SENSOR_OK) {
 		temp_measure_counter = 0;
 	} else {
 		temp_measure_counter = TEMP_MEASURE_END;
@@ -268,8 +268,13 @@ void process_display(void) {
 		}
 
 		case STATE_OVERHEAT_ON: {
-			rled_on();
-			gled_off();
+			if (blink_on) {
+				rled_on();
+				gled_off();
+			} else {
+				rled_off();
+				gled_on();
+			}
 			break;
 		}
 
