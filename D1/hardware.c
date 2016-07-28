@@ -22,13 +22,9 @@ settings_t ee_settings EEMEM = {
 
 /* Sensor */
 
-uint8_t search_sensors(void) {
-
-	uint8_t diff, sensors;
-	
-	sensors = 0;
-	
-	diff = OW_SEARCH_FIRST;
+uint8_t sensors_search(void) {
+	uint8_t diff = OW_SEARCH_FIRST;
+	uint8_t sensors = 0;
 
 	ow_reset();
 
@@ -49,20 +45,29 @@ uint8_t search_sensors(void) {
 	return sensors;
 }
 
+uint8_t sensor_setup(void) {
+	if (sensors_search() == 1) {
+		if (DS18X20_write_scratchpad(sensor_id, 0x64, 0x8A, 0x1F) == DS18X20_OK) {
+			return SENSOR_OK;
+		}
+	}
+
+	return SENSOR_ERR;
+}
+
 uint8_t sensor_measure_temp(void) {
 	if (DS18X20_start_meas(DS18X20_POWER_EXTERN, NULL) == DS18X20_OK) {
-		return 1;
+		return SENSOR_OK;
 	}
 	
-	return 0;
+	return SENSOR_ERR;
 }
 
 int16_t sensor_read_temp(void) {
-	int16_t temp = WRONG_TEMP;
-	
+	int16_t temp = SENSOR_TEMP_WRONG * 10;	
 	DS18X20_read_decicelsius(sensor_id, &temp);
 
-	return temp;
+	return temp / 10;
 }
 
 /* Timer0 */
@@ -213,7 +218,7 @@ uint8_t hardware_setup(void) {
 	
 	ow_set_bus(&PINC, &PORTC, &DDRC, PC1);
 
-	if (search_sensors() != 1) {
+	if (sensor_read_temp() != SENSOR_OK) {
 		return 0;
 	}
 

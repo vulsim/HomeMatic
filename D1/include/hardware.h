@@ -5,7 +5,9 @@
 #include "settings.h"
 #include "ds18x20.h"
 
-#define WRONG_TEMP	(-273)
+#define SENSOR_TEMP_WRONG	(-273)
+#define SENSOR_OK			0x0
+#define SENSOR_ERR			0x1
 
 extern settings_t settings;
 
