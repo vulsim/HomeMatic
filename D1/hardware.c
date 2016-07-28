@@ -15,7 +15,7 @@ settings_t ee_settings EEMEM = {
 
 	.dim_level = 25,
 
-	.overheat_threshold_temp = 60,
+	.overheat_threshold_temp = 70,
 
 	.overheat_release_temp = 55
 };

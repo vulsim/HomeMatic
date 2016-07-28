@@ -17,7 +17,8 @@
 #define STEP_THRESHOLD			5				// 100% -> 5 sec
 #define DIM_LEVEL_MIN			10
 #define DIM_LEVEL_MAX			99
-#define OVERHEAT_MAX_TEMP		70
+#define OVERHEAT_MAX_TEMP		85
+#define OVERHEAT_MIN_TEMP		10
 #define TEMP_MEASURE_END		10				// 100 ms
 #define TEMP_MEASURE_INTERVAL	3000			// 30 sec
 
@@ -309,10 +310,14 @@ void validate_settings(void) {
 
 	if (settings.overheat_threshold_temp > OVERHEAT_MAX_TEMP) {
 		settings.overheat_threshold_temp = OVERHEAT_MAX_TEMP;
+	} else if (settings.overheat_threshold_temp < OVERHEAT_MIN_TEMP) {
+		settings.overheat_threshold_temp = settings.OVERHEAT_MAX_TEMP;
 	}
 
 	if (settings.overheat_release_temp > settings.overheat_threshold_temp) {
 		settings.overheat_release_temp = settings.overheat_threshold_temp;
+	} else if (settings.overheat_release_temp < OVERHEAT_MIN_TEMP) {
+		settings.overheat_release_temp = OVERHEAT_MIN_TEMP;
 	}
 }
 
