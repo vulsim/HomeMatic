@@ -125,17 +125,8 @@ ISR(TIMER0_OVF_vect) {
 		step_counter++;	
 	}
 
-	if (temp_measure_counter < TEMP_MEASURE_INTERVAL) {
+	if (temp_measure_counter < TEMP_MEASURE_INTERVAL && temp_measure_counter != TEMP_MEASURE_END) {
 		temp_measure_counter++;
-
-		if (temp_measure_counter == TEMP_MEASURE_END) {
-			temp = sensor_read_temp();
-		}
-	} else if (sensor_measure_temp() == SENSOR_OK) {
-		temp_measure_counter = 0;
-	} else {
-		temp_measure_counter = TEMP_MEASURE_END;
-		temp = SENSOR_TEMP_WRONG;
 	}
 }
 
@@ -294,6 +285,24 @@ void process_display(void) {
 		}		
 	}
 }
+
+/* Sensor */
+
+void process_sensor(void) {
+	if (temp_measure_counter == TEMP_MEASURE_INTERVAL) {
+		if (sensor_measure_temp() == SENSOR_OK) {
+			temp_measure_counter = 0;
+		} else {
+			temp_measure_counter = TEMP_MEASURE_END + 1;
+			temp = SENSOR_TEMP_WRONG;
+		}
+	} else if (temp_measure_counter == TEMP_MEASURE_END) {
+		temp = sensor_read_temp();
+		temp_measure_counter++;
+	}
+}
+
+/* Helpers */
 
 void validate_settings(void) {
 	if (settings.dim_level_max > DIM_LEVEL_MAX) {
