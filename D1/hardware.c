@@ -11,13 +11,15 @@ settings_t ee_settings EEMEM = {
 	
 	.dim_level_min = 15,
 
-	.dim_level_max = 90,
+	.dim_level_max = 98,
 
-	.dim_level = 25,
+	.dim_level = 40,
+	
+	.dim_sweep_threshold = 50,
 
-	.overheat_threshold_temp = 70,
+	.overheat_threshold_temp = 85,
 
-	.overheat_release_temp = 55
+	.overheat_release_temp = 70
 };
 
 /* Sensor */

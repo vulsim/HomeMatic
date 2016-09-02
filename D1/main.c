@@ -9,15 +9,16 @@
 		
 #define MAX_INT					0xFFFF
 #define SYNC_LOSS_DURATION		(0xFFFF - 938)	// 1.5 of sync cycle (~15ms)
-#define MS_10					(0xFF - 156)	// 10 ms	
-#define US_750                  (0xFFFF - 47)	// ~750 us
+#define MS_10					(0xFF - 156)	// 10 ms
+#define US_250                  (0xFFFF - 16)	// ~250 us
 #define BLINK_DURATION			50				// 0.5 sec
 #define MIN_KEY_PRESS_THRESHOLD	5				// 50 ms
 #define SWEEP_START_THRESHOLD 	50				// 0.5 sec
+#define SWEEP_MEMORY_THRESHOLD 	200				// 2 sec
 #define STEP_THRESHOLD			5				// 100% -> 5 sec
-#define DIM_LEVEL_MIN			10
+#define DIM_LEVEL_MIN			15
 #define DIM_LEVEL_MAX			99
-#define OVERHEAT_MAX_TEMP		85
+#define OVERHEAT_MAX_TEMP		90
 #define OVERHEAT_MIN_TEMP		10
 #define TEMP_MEASURE_END		10				// 100 ms
 #define TEMP_MEASURE_INTERVAL	3000			// 30 sec
@@ -59,9 +60,11 @@ uint8_t blink_on;
 uint8_t step_counter;
 uint16_t blink_counter;
 uint16_t key_press_counter;
+uint16_t sweep_memory_counter;
 uint16_t temp_measure_counter;
 
 state_t state;
+state_t sweep_memory;
 sync_t sync_state;
 
 /* Interrupts handlers */
@@ -85,7 +88,7 @@ ISR(TIMER1_OVF_vect) {
 		case IDLE:
 			sync_state = ON;
 			dim_on();
-			timer1_set_counter(US_750);
+			timer1_set_counter(US_250);
 			timer1_start();
 			break;
 		
@@ -124,6 +127,14 @@ ISR(TIMER0_OVF_vect) {
 	if ((state == STATE_SWEEP_UP || state == STATE_SWEEP_DOWN) && step_counter < STEP_THRESHOLD) {
 		step_counter++;	
 	}
+	
+	if ((sweep_memory == STATE_SWEEP_UP || sweep_memory == STATE_SWEEP_DOWN) && state == STATE_ON) {
+		if (sweep_memory_counter < SWEEP_MEMORY_THRESHOLD) {
+			sweep_memory_counter++;	
+		} else {
+			sweep_memory = STATE_OFF;
+		}
+	}
 
 	if (temp_measure_counter < TEMP_MEASURE_INTERVAL && temp_measure_counter != TEMP_MEASURE_END) {
 		temp_measure_counter++;
@@ -156,6 +167,7 @@ void process_state(uint8_t key_pressed, uint16_t key_press_counter) {
 				state = STATE_OVERHEAT_OFF;				
 			} else if (!key_pressed && temp < settings.overheat_release_temp && temp != SENSOR_TEMP_WRONG) {
 				state = STATE_ON;
+				sweep_memory = STATE_OFF;
 			}
 			break;
 		}
@@ -165,6 +177,7 @@ void process_state(uint8_t key_pressed, uint16_t key_press_counter) {
 				state = STATE_OVERHEAT_OFF;
 			} else if (!key_pressed) {
 				state = STATE_ON;
+				sweep_memory = STATE_OFF;
 			}
 			break;
 		}
@@ -175,15 +188,25 @@ void process_state(uint8_t key_pressed, uint16_t key_press_counter) {
 			} else if (key_pressed) {
 				if (key_press_counter > SWEEP_START_THRESHOLD) {
 					step_counter = 0;
+					sweep_memory_counter = 0;
 
-					if (settings.dim_level > (settings.dim_level_min + settings.dim_level_max) / 2) {
-						state =  STATE_SWEEP_DOWN;
+					if (sweep_memory == STATE_SWEEP_DOWN && 
+						settings.dim_level > settings.dim_level_min) {
+						state = STATE_SWEEP_DOWN;
+					} else if (sweep_memory == STATE_SWEEP_UP &&
+						settings.dim_level < settings.dim_level_max) {
+						state = STATE_SWEEP_UP;
+					} else if (settings.dim_level > settings.dim_sweep_threshold) {
+						state = STATE_SWEEP_DOWN;
+						sweep_memory = state;
 					} else {
 						state = STATE_SWEEP_UP;
+						sweep_memory = state;
 					}					
 				}
 			} else if (key_press_counter > MIN_KEY_PRESS_THRESHOLD && key_press_counter < SWEEP_START_THRESHOLD) {
 				state = STATE_OFF;
+				sweep_memory = STATE_OFF;
 				
 				settings_t ee_settings;
 				read_settings(&ee_settings); 
@@ -316,6 +339,18 @@ void validate_settings(void) {
 	} else if (settings.dim_level_min >= settings.dim_level_max) {
 		settings.dim_level_min = settings.dim_level_max - 1;
 	}
+	
+	if (settings.dim_level < settings.dim_level_min) {
+		settings.dim_level = settings.dim_level_min;
+	} else if (settings.dim_level > settings.dim_level_max) {
+		settings.dim_level = settings.dim_level;
+	}
+	
+	if (settings.dim_sweep_threshold <= settings.dim_level_min) {
+		settings.dim_sweep_threshold = 50;
+	} else if (settings.dim_sweep_threshold >= settings.dim_level_max) {
+		settings.dim_sweep_threshold = 50;
+	}
 
 	if (settings.overheat_threshold_temp > OVERHEAT_MAX_TEMP) {
 		settings.overheat_threshold_temp = OVERHEAT_MAX_TEMP;
@@ -346,8 +381,9 @@ int main(void) {
 		key_press_counter = 0;
 		temp_measure_counter = 1;
 
-		sync_state = IDLE;		
-		state = WAIT_SYNC;
+		sync_state = WAIT_SYNC;		
+		state = STATE_OFF;
+		sweep_memory = STATE_OFF;
 
 		if (sensor_measure_temp() == SENSOR_OK) {
 			_delay_ms(100);
@@ -365,6 +401,7 @@ int main(void) {
 
 			process_state(key_pressed, key_press_counter);
 			process_display();
+			process_sensor();
 
 			if (!key_pressed) {
 				timer0_disable_isr();
